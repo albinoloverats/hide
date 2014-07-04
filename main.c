@@ -12,7 +12,9 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 
-#include <png.h>
+#ifndef _WIN32
+    #include <netinet/in.h>
+#endif
 
 #include "main.h"
 
@@ -23,7 +25,7 @@ void process_file(bool store, char *file_name, uint64_t file_size, image_info_t 
 
     if ((f = open(file_name, store ? O_RDONLY : (O_RDWR | O_CREAT), S_IRUSR | S_IWUSR)) < 0)
         return;
-    if (store && (map = mmap(NULL, file_size, PROT_READ, MAP_SHARED, f, 0)) == MAP_FAILED)
+    if (store && (map = mmap(NULL, ntohll(file_size), PROT_READ, MAP_SHARED, f, 0)) == MAP_FAILED)
         return;
 
     uint8_t *z = (uint8_t *)&file_size;
@@ -59,8 +61,8 @@ void process_file(bool store, char *file_name, uint64_t file_size, image_info_t 
                     z[x] = c;
                     if (x == sizeof file_size - 1)
                     {
-                        ftruncate(f, file_size);
-                        if ((map = mmap(NULL, file_size, PROT_READ | PROT_WRITE, MAP_SHARED, f, 0)) == MAP_FAILED)
+                        ftruncate(f, ntohll(file_size));
+                        if ((map = mmap(NULL, ntohll(file_size), PROT_READ | PROT_WRITE, MAP_SHARED, f, 0)) == MAP_FAILED)
                             goto done;
                     }
                 }
@@ -70,13 +72,13 @@ void process_file(bool store, char *file_name, uint64_t file_size, image_info_t 
 
             if (y > 0 || x >= sizeof file_size)
                 i++;
-            if (map && i >= file_size)
+            if (map && i >= ntohll(file_size))
                 goto done;
         }
     }
 
 done:
-    munmap(map, file_size);
+    munmap(map, ntohll(file_size));
     close(f);
     return;
 }
@@ -114,7 +116,7 @@ int main(int argc, char **argv)
     }
     else
     {
-        fprintf(stderr, "Unsupported fimage format; please use either PNG or TIFF\n");
+        fprintf(stderr, "Unsupported image format; please use either PNG or TIFF\n");
         return EFTYPE;
     }
 
@@ -130,7 +132,7 @@ int main(int argc, char **argv)
             fprintf(stderr, "Too much data to hide; available capacity: %" PRIu64 " bytes", capacity);
             return ENOSPC;
         }
-        process_file(true, file, s.st_size, image_info);
+        process_file(true, file, htonll(s.st_size), image_info);
 
         write_file_func(image_out, image_info);
     }
