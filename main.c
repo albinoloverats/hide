@@ -1,6 +1,8 @@
+#include <errno.h>
+
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdint.h>
+#include <inttypes.h>
 #include <stdbool.h>
 #include <string.h>
 
@@ -25,11 +27,11 @@ void process_file(bool store, char *file_name, uint64_t file_size, image_info_t 
         return;
 
     uint8_t *z = (uint8_t *)&file_size;
-    int i = 0;
-    for (int y = 0; y < image_info.pixel_height; y++)
+    uint64_t i = 0;
+    for (uint64_t y = 0; y < image_info.pixel_height; y++)
     {
         uint8_t *row = image_info.buffer[y];
-        for (int x = 0; x < image_info.pixel_width; x++)
+        for (uint64_t x = 0; x < image_info.pixel_width; x++)
         {
             uint8_t *ptr = &(row[x * image_info.bytes_per_pixel]);
 
@@ -82,7 +84,11 @@ done:
 int main(int argc, char **argv)
 {
     if (argc != 3 && argc != 4)
+    {
+        fprintf(stderr, "Usage: %s <source image> <data to hide> <output image>\n", argv[0]);
+        fprintf(stderr, "       %s <image> <recovered data>\n", argv[0]);
         return EXIT_FAILURE;
+    }
 
     char *image_in= argv[1];
     char *file = argv[2];
@@ -90,6 +96,10 @@ int main(int argc, char **argv)
 
     image_info_t image_info = { 0, 0, 0, NULL };
 
+    /*
+     * figure out which image format to use (currently uses file name
+     * extension; TODO check the beginning of the file
+     */
     void (*read_file_func)(char *, image_info_t *);
     void (*write_file_func)(char *, image_info_t);
     if (!strcasecmp(".png", strrchr(image_in, '.')))
@@ -103,7 +113,10 @@ int main(int argc, char **argv)
         write_file_func = write_file_tiff;
     }
     else
-        return EXIT_SUCCESS;
+    {
+        fprintf(stderr, "Unsupported fimage format; please use either PNG or TIFF\n");
+        return EFTYPE;
+    }
 
     read_file_func(image_in, &image_info);
 
@@ -111,8 +124,12 @@ int main(int argc, char **argv)
     {
         struct stat s;
         stat(file, &s);
-        if (s.st_size > image_info.pixel_width * image_info.pixel_height - sizeof( uint64_t))
-            return EXIT_FAILURE;
+        uint64_t capacity = image_info.pixel_width * image_info.pixel_height - sizeof( uint64_t );
+        if ((uint64_t)s.st_size > capacity)
+        {
+            fprintf(stderr, "Too much data to hide; available capacity: %" PRIu64 " bytes", capacity);
+            return ENOSPC;
+        }
         process_file(true, file, s.st_size, image_info);
 
         write_file_func(image_out, image_info);

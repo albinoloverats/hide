@@ -15,7 +15,7 @@ static png_byte bit_depth;
 void read_file_png(char *file_name, image_info_t *image_info)
 {
     /* 8 is the maximum size that can be checked */
-    char header[8];
+    uint8_t header[8];
 
     /* open file and test for it being a png */
     FILE *fp = fopen(file_name, "rb");
@@ -66,7 +66,7 @@ void read_file_png(char *file_name, image_info_t *image_info)
         return;
 
     image_info->buffer = (uint8_t **)malloc(sizeof( uint8_t * ) * image_info->pixel_height);
-    for (int y = 0; y < image_info->pixel_height; y++)
+    for (uint64_t y = 0; y < image_info->pixel_height; y++)
         image_info->buffer[y] = malloc(image_info->pixel_width * image_info->bytes_per_pixel);
 
     png_read_image(png_ptr, image_info->buffer);
@@ -135,7 +135,7 @@ void write_file_png(char *file_name, image_info_t image_info)
     png_write_end(png_ptr, NULL);
 
     /* clean up heap allocation */
-    for (int y = 0; y < image_info.pixel_height; y++)
+    for (uint64_t y = 0; y < image_info.pixel_height; y++)
         free(image_info.buffer[y]);
     free(image_info.buffer);
 

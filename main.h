@@ -1,6 +1,10 @@
 #ifndef _INCLUDED_ALREADY_
 #define _INCLUDED_ALREADY_
 
+#ifndef EFTYPE
+    #define EFTYPE 79
+#endif
+
 typedef struct
 {
     uint64_t pixel_height;

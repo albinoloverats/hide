@@ -17,7 +17,7 @@ void read_file_tiff(char *file_name, image_info_t *image_info)
     TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &image_info->bytes_per_pixel);
 
     image_info->buffer = (uint8_t **)malloc(sizeof( uint8_t * ) * image_info->pixel_height);
-    for (int y = 0; y < image_info->pixel_height; y++)
+    for (uint64_t y = 0; y < image_info->pixel_height; y++)
     {
         image_info->buffer[y] = malloc(image_info->pixel_width * image_info->bytes_per_pixel);
         TIFFReadScanline(tif, image_info->buffer[y], y, 0);
@@ -44,7 +44,7 @@ void write_file_tiff(char *file_name, image_info_t image_info)
 
     TIFFSetField(tif, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tif, image_info.pixel_width * image_info.bytes_per_pixel));
 
-    for (int y = 0; y < image_info.pixel_height; y++)
+    for (uint64_t y = 0; y < image_info.pixel_height; y++)
     {
         TIFFWriteScanline(tif, image_info.buffer[y], y, 0);
         free(image_info.buffer[y]);
