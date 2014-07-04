@@ -44,10 +44,12 @@ typedef struct
 }
 image_info_t;
 
-void read_file_png(char *, image_info_t *);
-void write_file_png(char *, image_info_t);
+bool is_png(char *);
+int read_file_png(char *, image_info_t *);
+int write_file_png(char *, image_info_t);
 
-void read_file_tiff(char *, image_info_t *);
-void write_file_tiff(char *, image_info_t);
+bool is_tiff(char *);
+int read_file_tiff(char *, image_info_t *);
+int write_file_tiff(char *, image_info_t);
 
 #endif

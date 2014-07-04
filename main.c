@@ -18,7 +18,7 @@
 
 #include "main.h"
 
-void process_file(bool store, char *file_name, uint64_t file_size, image_info_t image_info)
+int process_file(bool store, char *file_name, uint64_t file_size, image_info_t image_info)
 {
     errno = EXIT_SUCCESS;
 
@@ -26,9 +26,9 @@ void process_file(bool store, char *file_name, uint64_t file_size, image_info_t 
     uint8_t *map = NULL;
 
     if ((f = open(file_name, store ? O_RDONLY : (O_RDWR | O_CREAT), S_IRUSR | S_IWUSR)) < 0)
-        return;
+        return errno;
     if (store && (map = mmap(NULL, ntohll(file_size), PROT_READ, MAP_SHARED, f, 0)) == MAP_FAILED)
-        return;
+        return errno;
 
     uint8_t *z = (uint8_t *)&file_size;
     uint64_t i = 0;
@@ -82,7 +82,7 @@ void process_file(bool store, char *file_name, uint64_t file_size, image_info_t 
 done:
     munmap(map, ntohll(file_size));
     close(f);
-    return;
+    return errno;
 }
 
 int main(int argc, char **argv)
@@ -98,20 +98,15 @@ int main(int argc, char **argv)
     char *file = argv[2];
     char *image_out = argv[3];
 
-    image_info_t image_info = { 0, 0, 0, NULL, NULL };
+    int (*read_file_func)(char *, image_info_t *);
+    int (*write_file_func)(char *, image_info_t);
 
-    /*
-     * figure out which image format to use (currently uses file name
-     * extension; TODO check the beginning of the file
-     */
-    void (*read_file_func)(char *, image_info_t *);
-    void (*write_file_func)(char *, image_info_t);
-    if (!strcasecmp(".png", strrchr(image_in, '.')))
+    if (is_png(image_in))
     {
         read_file_func = read_file_png;
         write_file_func = write_file_png;
     }
-    else if (!strcasecmp(".tiff", strrchr(image_in, '.')) || !strcasecmp(".tif", strrchr(image_in, '.')))
+    else if (is_tiff(image_in))
     {
         read_file_func = read_file_tiff;
         write_file_func = write_file_tiff;
@@ -122,15 +117,21 @@ int main(int argc, char **argv)
         return EFTYPE;
     }
 
-    read_file_func(image_in, &image_info);
-    if (errno)
+    /*
+     * read the source image
+     */
+    image_info_t image_info = { 0, 0, 0, NULL, NULL };
+    if (read_file_func(image_in, &image_info))
     {
-        perror("Failed to read source imnage");
+        perror("Failed to read source image");
         return errno;
     }
 
     if (argc == 4)
     {
+        /*
+         * figure out how much data we can hide
+         */
         struct stat s;
         stat(file, &s);
         uint64_t capacity = image_info.pixel_width * image_info.pixel_height - sizeof( uint64_t );
@@ -139,15 +140,18 @@ int main(int argc, char **argv)
             fprintf(stderr, "Too much data to hide; available capacity: %" PRIu64 " bytes", capacity);
             return ENOSPC;
         }
-        process_file(true, file, htonll(s.st_size), image_info);
-        if (errno)
+        /*
+         * overlay the data on the image
+         */
+        if (process_file(true, file, htonll(s.st_size), image_info))
         {
             perror("Failed during data processing");
             return errno;
         }
-
-        write_file_func(image_out, image_info);
-        if (errno)
+        /*
+         * write the image with the hidden data
+         */
+        if (write_file_func(image_out, image_info))
         {
             perror("Failed to write output image");
             return errno;
@@ -155,13 +159,17 @@ int main(int argc, char **argv)
     }
     else
     {
-        process_file(false, file, 0, image_info);
-        if (errno)
+        /*
+         * extract the hidden data
+         */
+        if (process_file(false, file, 0, image_info))
         {
             perror("Failed during data processing");
             return errno;
         }
     }
+
+    fprintf(stderr, "Done.\n");
 
     return EXIT_SUCCESS;
 }

@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include <unistd.h>
 
@@ -11,20 +12,29 @@
 
 #include "main.h"
 
-void read_file_png(char *file_name, image_info_t *image_info)
+bool is_png(char *file_name)
+{
+    FILE *fp = fopen(file_name, "rb");
+    if (!fp)
+        return false;
+
+    uint8_t header[8];
+    fread(header, 1, 8, fp);
+    fclose(fp);
+
+    return !png_sig_cmp(header, 0, 8);
+}
+
+int read_file_png(char *file_name, image_info_t *image_info)
 {
     errno = EXIT_SUCCESS;
 
-    /* 8 is the maximum size that can be checked */
-    uint8_t header[8];
-
-    /* open file and test for it being a png */
     FILE *fp = fopen(file_name, "rb");
     if (!fp)
-        return;
+        return errno;
+
+    uint8_t header[8];
     fread(header, 1, 8, fp);
-    if (png_sig_cmp(header, 0, 8))
-        goto cf;
 
     /* initialize stuff */
     png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
@@ -79,17 +89,17 @@ cleanup:
 cf:
     fclose(fp);
 
-    return;
+    return errno;
 }
 
-void write_file_png(char *file_name, image_info_t image_info)
+int write_file_png(char *file_name, image_info_t image_info)
 {
     errno = EXIT_SUCCESS;
 
     /* create file */
     FILE *fp = fopen(file_name, "wb");
     if (!fp)
-        return;
+        return errno;
 
     /* initialize stuff */
     png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
@@ -153,5 +163,5 @@ cleanup:
     png_destroy_write_struct(&png_ptr, &info_ptr);
 cf:
     fclose(fp);
-    return;
+    return errno;
 }
