@@ -116,6 +116,11 @@ int main(int argc, char **argv)
         read_file_func = read_file_tiff;
         write_file_func = write_file_tiff;
     }
+    else if (!strcasecmp(".jpeg", strrchr(image_in, '.')) || !strcasecmp(".jpg", strrchr(image_in, '.')))
+    {
+        read_file_func = read_file_jpeg;
+        write_file_func = write_file_jpeg;
+    }
     else
     {
         fprintf(stderr, "Unsupported image format; please use either PNG or TIFF\n");

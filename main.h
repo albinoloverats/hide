@@ -50,4 +50,7 @@ void write_file_png(char *, image_info_t);
 void read_file_tiff(char *, image_info_t *);
 void write_file_tiff(char *, image_info_t);
 
+void read_file_jpeg(char *, image_info_t *);
+void write_file_jpeg(char *, image_info_t);
+
 #endif

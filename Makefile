@@ -2,7 +2,7 @@
 
 APP      = imagine
 
-SOURCE   = main.c png.c tiff.c
+SOURCE   = main.c png.c tiff.c jpeg.c
 
 CFLAGS   = -Wall -Wextra -Werror -std=gnu99 `pkg-config --cflags libpng` -pipe -O2
 CPPFLAGS = -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64
