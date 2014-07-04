@@ -1,3 +1,5 @@
+#include <errno.h>
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -14,6 +16,8 @@ static png_byte bit_depth;
 
 void read_file_png(char *file_name, image_info_t *image_info)
 {
+    errno = EXIT_SUCCESS;
+
     /* 8 is the maximum size that can be checked */
     uint8_t header[8];
 
@@ -23,19 +27,19 @@ void read_file_png(char *file_name, image_info_t *image_info)
         return;
     fread(header, 1, 8, fp);
     if (png_sig_cmp(header, 0, 8))
-        return;
+        goto cf;
 
     /* initialize stuff */
     png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
     if (!png_ptr)
-        return;
+        goto cf;
 
     png_infop info_ptr = png_create_info_struct(png_ptr);
     if (!info_ptr)
-        return;
+        goto cleanup;
 
     if (setjmp(png_jmpbuf(png_ptr)))
-        return;
+        goto cleanup;
 
     png_init_io(png_ptr, fp);
     png_set_sig_bytes(png_ptr, 8);
@@ -55,7 +59,7 @@ void read_file_png(char *file_name, image_info_t *image_info)
             image_info->bytes_per_pixel = 4;
             break;
         default:
-            return;
+            goto cleanup;
     }
 
     //number_of_passes = png_set_interlace_handling(png_ptr);
@@ -63,7 +67,7 @@ void read_file_png(char *file_name, image_info_t *image_info)
 
     /* read file */
     if (setjmp(png_jmpbuf(png_ptr)))
-        return;
+        goto cleanup;
 
     image_info->buffer = (uint8_t **)malloc(sizeof( uint8_t * ) * image_info->pixel_height);
     for (uint64_t y = 0; y < image_info->pixel_height; y++)
@@ -71,6 +75,9 @@ void read_file_png(char *file_name, image_info_t *image_info)
 
     png_read_image(png_ptr, image_info->buffer);
 
+cleanup:
+    png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+cf:
     fclose(fp);
 
     return;
@@ -78,6 +85,8 @@ void read_file_png(char *file_name, image_info_t *image_info)
 
 void write_file_png(char *file_name, image_info_t image_info)
 {
+    errno = EXIT_SUCCESS;
+
     /* create file */
     FILE *fp = fopen(file_name, "wb");
     if (!fp)
@@ -86,22 +95,22 @@ void write_file_png(char *file_name, image_info_t image_info)
     /* initialize stuff */
     png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
     if (!png_ptr)
-        return;
+        goto cf;
 
     png_set_compression_level(png_ptr, 9/*Z_BEST_COMPRESSION*/);
 
     png_infop info_ptr = png_create_info_struct(png_ptr);
     if (!info_ptr)
-        return;
+        goto cleanup;
 
     if (setjmp(png_jmpbuf(png_ptr)))
-        return;
+        goto cleanup;
 
     png_init_io(png_ptr, fp);
 
     /* write header */
     if (setjmp(png_jmpbuf(png_ptr)))
-        return;
+        goto cleanup;
 
     png_byte color_type;
     switch (image_info.bytes_per_pixel)
@@ -113,7 +122,7 @@ void write_file_png(char *file_name, image_info_t image_info)
             color_type = PNG_COLOR_TYPE_RGBA;
             break;
         default:
-            return;
+            goto cleanup;
     }
 
 
@@ -124,13 +133,13 @@ void write_file_png(char *file_name, image_info_t image_info)
 
     /* write bytes */
     if (setjmp(png_jmpbuf(png_ptr)))
-        return;
+        goto cleanup;
 
     png_write_image(png_ptr, image_info.buffer);
 
     /* end write */
     if (setjmp(png_jmpbuf(png_ptr)))
-        return;
+        goto cleanup;
 
     png_write_end(png_ptr, NULL);
 
@@ -139,6 +148,9 @@ void write_file_png(char *file_name, image_info_t image_info)
         free(image_info.buffer[y]);
     free(image_info.buffer);
 
+cleanup:
+    png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+cf:
     fclose(fp);
     return;
 }

@@ -20,6 +20,8 @@
 
 void process_file(bool store, char *file_name, uint64_t file_size, image_info_t image_info)
 {
+    errno = EXIT_SUCCESS;
+
     int64_t f = 0;
     uint8_t *map = NULL;
 
@@ -121,6 +123,11 @@ int main(int argc, char **argv)
     }
 
     read_file_func(image_in, &image_info);
+    if (errno)
+    {
+        perror("Failed to read source imnage");
+        return errno;
+    }
 
     if (argc == 4)
     {
@@ -133,11 +140,28 @@ int main(int argc, char **argv)
             return ENOSPC;
         }
         process_file(true, file, htonll(s.st_size), image_info);
+        if (errno)
+        {
+            perror("Failed during data processing");
+            return errno;
+        }
 
         write_file_func(image_out, image_info);
+        if (errno)
+        {
+            perror("Failed to write output imnage");
+            return errno;
+        }
     }
     else
+    {
         process_file(false, file, 0, image_info);
+        if (errno)
+        {
+            perror("Failed during data processing");
+            return errno;
+        }
+    }
 
     return EXIT_SUCCESS;
 }

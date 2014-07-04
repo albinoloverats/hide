@@ -1,3 +1,5 @@
+#include <errno.h>
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -10,7 +12,11 @@
 
 void read_file_tiff(char *file_name, image_info_t *image_info)
 {
+    errno = EXIT_SUCCESS;
+
     TIFF *tif = TIFFOpen(file_name, "r");
+    if (!tif)
+        return;
 
     TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &image_info->pixel_width);
     TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &image_info->pixel_height);
@@ -30,7 +36,11 @@ void read_file_tiff(char *file_name, image_info_t *image_info)
 
 void write_file_tiff(char *file_name, image_info_t image_info)
 {
+    errno = EXIT_SUCCESS;
+
     TIFF *tif = TIFFOpen(file_name, "w");
+    if (!tif)
+        return;
 
     TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, image_info.pixel_width);
     TIFFSetField(tif, TIFFTAG_IMAGELENGTH, image_info.pixel_height);
