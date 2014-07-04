@@ -11,9 +11,9 @@ LIBS     = `pkg-config --libs libpng` -ltiff
 
 DEBUG    = -O0 -ggdb
 
-all:
-	@$(CC) $(CFLAGS) $(CPPFLAGS) $(SOURCE) $(LIBS) -o $(APP)
-	-@echo "built ‘`echo $(SOURCE) $(COMMON) | sed 's/ /’\n      ‘/g'`’ → ‘$(APP)’"
+#all:
+#	@$(CC) $(CFLAGS) $(CPPFLAGS) $(SOURCE) $(LIBS) -o $(APP)
+#	-@echo "built ‘`echo $(SOURCE) $(COMMON) | sed 's/ /’\n      ‘/g'`’ → ‘$(APP)’"
 
 debug:
 	@$(CC) $(CFLAGS) $(CPPFLAGS) $(SOURCE) $(LIBS) $(DEBUG) -o $(APP)

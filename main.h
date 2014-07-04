@@ -1,6 +1,8 @@
 #ifndef _INCLUDED_ALREADY_
 #define _INCLUDED_ALREADY_
 
+#include <stdint.h>
+
 #ifndef EFTYPE
     #define EFTYPE 79
 #endif
@@ -38,6 +40,7 @@ typedef struct
     uint64_t pixel_width;
     uint16_t bytes_per_pixel;
     uint8_t **buffer;
+    void *extra;
 }
 image_info_t;
 

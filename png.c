@@ -3,16 +3,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 
 #include <unistd.h>
 
 #include <png.h>
 
 #include "main.h"
-
-static png_byte bit_depth;
-
-//int number_of_passes;
 
 void read_file_png(char *file_name, image_info_t *image_info)
 {
@@ -48,7 +45,9 @@ void read_file_png(char *file_name, image_info_t *image_info)
 
     image_info->pixel_width = png_get_image_width(png_ptr, info_ptr);
     image_info->pixel_height = png_get_image_height(png_ptr, info_ptr);
-    bit_depth = png_get_bit_depth(png_ptr, info_ptr);
+    png_byte bit_depth = png_get_bit_depth(png_ptr, info_ptr);
+    image_info->extra = malloc(sizeof bit_depth);
+    memcpy(image_info->extra, &bit_depth, sizeof bit_depth);
 
     switch (png_get_color_type(png_ptr, info_ptr))
     {
@@ -125,9 +124,11 @@ void write_file_png(char *file_name, image_info_t image_info)
             goto cleanup;
     }
 
-
+    png_byte bit_depth;
+    memcpy(&bit_depth, image_info.extra, sizeof bit_depth);
     png_set_IHDR(png_ptr, info_ptr, image_info.pixel_width, image_info.pixel_height, bit_depth,
              color_type, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+    free(image_info.extra);
 
     png_write_info(png_ptr, info_ptr);
 
@@ -149,7 +150,7 @@ void write_file_png(char *file_name, image_info_t image_info)
     free(image_info.buffer);
 
 cleanup:
-    png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+    png_destroy_write_struct(&png_ptr, &info_ptr);
 cf:
     fclose(fp);
     return;

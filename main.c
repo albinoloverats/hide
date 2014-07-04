@@ -98,7 +98,7 @@ int main(int argc, char **argv)
     char *file = argv[2];
     char *image_out = argv[3];
 
-    image_info_t image_info = { 0, 0, 0, NULL };
+    image_info_t image_info = { 0, 0, 0, NULL, NULL };
 
     /*
      * figure out which image format to use (currently uses file name
@@ -111,7 +111,7 @@ int main(int argc, char **argv)
         read_file_func = read_file_png;
         write_file_func = write_file_png;
     }
-    else if (!strcasecmp(".tiff", strrchr(image_in, '.')))
+    else if (!strcasecmp(".tiff", strrchr(image_in, '.')) || !strcasecmp(".tif", strrchr(image_in, '.')))
     {
         read_file_func = read_file_tiff;
         write_file_func = write_file_tiff;
@@ -149,7 +149,7 @@ int main(int argc, char **argv)
         write_file_func(image_out, image_info);
         if (errno)
         {
-            perror("Failed to write output imnage");
+            perror("Failed to write output image");
             return errno;
         }
     }
