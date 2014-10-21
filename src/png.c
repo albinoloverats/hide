@@ -12,7 +12,7 @@
 
 #include "main.h"
 
-bool is_png(char *file_name)
+extern bool is_png(char *file_name)
 {
     FILE *fp = fopen(file_name, "rb");
     if (!fp)
@@ -25,7 +25,7 @@ bool is_png(char *file_name)
     return !png_sig_cmp(header, 0, 8);
 }
 
-int read_file_png(char *file_name, image_info_t *image_info)
+extern int read_file_png(char *file_name, image_info_t *image_info)
 {
     errno = EXIT_SUCCESS;
 
@@ -45,6 +45,10 @@ int read_file_png(char *file_name, image_info_t *image_info)
     if (!info_ptr)
         goto cleanup;
 
+    /*
+     * libpng uses setjmp as a replacement for exceptions; so “catch”
+     * them and handle them our own way
+     */
     if (setjmp(png_jmpbuf(png_ptr)))
         goto cleanup;
 
@@ -92,7 +96,7 @@ cf:
     return errno;
 }
 
-int write_file_png(char *file_name, image_info_t image_info)
+extern int write_file_png(char *file_name, image_info_t image_info)
 {
     errno = EXIT_SUCCESS;
 

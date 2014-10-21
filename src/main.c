@@ -16,9 +16,11 @@
     #include <netinet/in.h>
 #endif
 
+#include "common/common.h"
+
 #include "main.h"
 
-int process_file(bool store, char *file_name, uint64_t file_size, image_info_t image_info)
+static int process_file(bool store, char *file_name, uint64_t file_size, image_info_t image_info)
 {
     errno = EXIT_SUCCESS;
 
@@ -42,7 +44,7 @@ int process_file(bool store, char *file_name, uint64_t file_size, image_info_t i
             if (store)
             {
                 unsigned char c = y == 0 && x < sizeof file_size ? z[x] : map[i];
-#if 0
+#if THIS_DIDNT_WORK_THE_IMAGE_LOOSES_TOO_MUCH_QUALITY
                 ptr[0] = (ptr[0] & 0xF0) | ((c & 0xF0) >> 4);
                 ptr[1] = (ptr[1] & 0xF0) | ((c & 0x3C) >> 2);
                 ptr[2] = (ptr[2] & 0xF0) |  (c & 0x0F);

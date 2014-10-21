@@ -2,17 +2,17 @@
 
 APP      = imagine
 
-SOURCE   = main.c png.c tiff.c
+SOURCE   = src/main.c src/png.c src/tiff.c
 
-CFLAGS   = -Wall -Wextra -Werror -std=gnu99 `pkg-config --cflags libpng` -pipe -O2
+CFLAGS   = -Wall -Wextra -Werror -std=gnu99 `pkg-config --cflags libpng` -pipe
 CPPFLAGS = -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64
 
 LIBS     = `pkg-config --libs libpng` -ltiff
 
-DEBUG    = -O0 -ggdb
+DEBUG    = -O0 -g3 -ggdb
 
 #all:
-#	@$(CC) $(CFLAGS) $(CPPFLAGS) $(SOURCE) $(LIBS) -o $(APP)
+#	@$(CC) $(CFLAGS) $(CPPFLAGS) $(SOURCE) $(LIBS) -O2 -o $(APP)
 #	-@echo "built ‘`echo $(SOURCE) $(COMMON) | sed 's/ /’\n      ‘/g'`’ → ‘$(APP)’"
 
 debug:

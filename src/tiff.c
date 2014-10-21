@@ -11,7 +11,7 @@
 
 #include "main.h"
 
-bool is_tiff(char *file_name)
+extern bool is_tiff(char *file_name)
 {
     TIFFSetErrorHandler(NULL);
     TIFFSetWarningHandler(NULL);
@@ -23,7 +23,7 @@ bool is_tiff(char *file_name)
     return true;
 }
 
-int read_file_tiff(char *file_name, image_info_t *image_info)
+extern int read_file_tiff(char *file_name, image_info_t *image_info)
 {
     errno = EXIT_SUCCESS;
 
@@ -47,7 +47,7 @@ int read_file_tiff(char *file_name, image_info_t *image_info)
     return errno;
 }
 
-int write_file_tiff(char *file_name, image_info_t image_info)
+extern int write_file_tiff(char *file_name, image_info_t image_info)
 {
     errno = EXIT_SUCCESS;
 
