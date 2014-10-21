@@ -20,6 +20,8 @@
 
 #include "main.h"
 
+#define CAPACITY (image_info.width * image_info.height - sizeof( uint64_t ))
+
 static int process_file(data_info_t data_info, image_info_t image_info)
 {
     errno = EXIT_SUCCESS;
@@ -81,6 +83,23 @@ done:
     return errno;
 }
 
+static bool will_fit(data_info_t *data_info, image_info_t image_info)
+{
+    /*
+     * figure out how much data we can hide
+     */
+    struct stat s;
+    stat(data_info->file, &s);
+    if ((uint64_t)s.st_size > CAPACITY)
+    {
+        errno = ENOSPC;
+        return false;
+    }
+    data_info->size = htonll(s.st_size);
+    data_info->hide = true;
+    return true;
+}
+
 int main(int argc, char **argv)
 {
     if (argc != 3 && argc != 4)
@@ -124,22 +143,14 @@ int main(int argc, char **argv)
 
     if (argc == 4)
     {
-        /*
-         * figure out how much data we can hide
-         */
-        struct stat s;
-        stat(file, &s);
-        uint64_t capacity = image_info.width * image_info.height - sizeof( uint64_t );
-        if ((uint64_t)s.st_size > capacity)
+        if (!will_fit(&data_info, image_info))
         {
-            fprintf(stderr, "Too much data to hide; available capacity: %" PRIu64 " bytes", capacity);
-            return ENOSPC;
+            fprintf(stderr, "Too much data to hide; find a larger image\nAvailable capacity: %" PRIu64 " bytes\n", CAPACITY);
+            return errno;
         }
         /*
          * overlay the data on the image
          */
-        data_info.size = htonll(s.st_size);
-        data_info.hide = true;
         if (process_file(data_info, image_info))
         {
             perror("Failed during data processing");
