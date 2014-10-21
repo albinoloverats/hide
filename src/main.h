@@ -29,12 +29,16 @@ typedef struct
 }
 data_info_t;
 
-extern bool is_png(char *);
-extern int read_file_png(image_info_t *);
-extern int write_file_png(image_info_t);
+typedef struct
+{
+    char *type;
+    bool (*is_type)(char *);
+    int (*read)(struct _image_info_t *);
+    int (*write)(struct _image_info_t);
+}
+image_type_t;
 
-extern bool is_tiff(char *);
-extern int read_file_tiff(image_info_t *);
-extern int write_file_tiff(image_info_t);
+extern image_type_t *init_png(void);
+extern image_type_t *init_tiff(void);
 
 #endif

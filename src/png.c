@@ -12,7 +12,7 @@
 
 #include "main.h"
 
-extern bool is_png(char *file_name)
+static bool is_png(char *file_name)
 {
     FILE *fp = fopen(file_name, "rb");
     if (!fp)
@@ -25,7 +25,7 @@ extern bool is_png(char *file_name)
     return !png_sig_cmp(header, 0, 8);
 }
 
-extern int read_file_png(image_info_t *image_info)
+static int read_png(image_info_t *image_info)
 {
     errno = EXIT_SUCCESS;
 
@@ -82,7 +82,7 @@ extern int read_file_png(image_info_t *image_info)
     if (setjmp(png_jmpbuf(png_ptr)))
         goto cleanup;
 
-    image_info->buffer = (uint8_t **)malloc(sizeof( uint8_t * ) * image_info->height);
+    image_info->buffer = (uint8_t **)malloc(sizeof (uint8_t *) * image_info->height);
     for (uint64_t y = 0; y < image_info->height; y++)
         image_info->buffer[y] = malloc(image_info->width * image_info->bpp);
 
@@ -96,7 +96,7 @@ cf:
     return errno;
 }
 
-extern int write_file_png(image_info_t image_info)
+static int write_png(image_info_t image_info)
 {
     errno = EXIT_SUCCESS;
 
@@ -168,4 +168,14 @@ cleanup:
 cf:
     fclose(fp);
     return errno;
+}
+
+extern image_type_t *init_png(void)
+{
+    image_type_t *png = malloc(sizeof (image_type_t));
+    png->type = strdup("PNG");
+    png->is_type = is_png;
+    png->read = read_png;
+    png->write = write_png;
+    return png;
 }

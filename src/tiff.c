@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 #include <stdbool.h>
 
 #include <unistd.h>
@@ -11,7 +12,7 @@
 
 #include "main.h"
 
-extern bool is_tiff(char *file_name)
+static bool is_tiff(char *file_name)
 {
     TIFFSetErrorHandler(NULL);
     TIFFSetWarningHandler(NULL);
@@ -23,7 +24,7 @@ extern bool is_tiff(char *file_name)
     return true;
 }
 
-extern int read_file_tiff(image_info_t *image_info)
+static int read_tiff(image_info_t *image_info)
 {
     errno = EXIT_SUCCESS;
 
@@ -35,7 +36,7 @@ extern int read_file_tiff(image_info_t *image_info)
     TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &image_info->height);
     TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &image_info->bpp);
 
-    image_info->buffer = (uint8_t **)malloc(sizeof( uint8_t * ) * image_info->height);
+    image_info->buffer = (uint8_t **)malloc(sizeof (uint8_t *) * image_info->height);
     for (uint64_t y = 0; y < image_info->height; y++)
     {
         image_info->buffer[y] = malloc(image_info->width * image_info->bpp);
@@ -47,7 +48,7 @@ extern int read_file_tiff(image_info_t *image_info)
     return errno;
 }
 
-extern int write_file_tiff(image_info_t image_info)
+static int write_tiff(image_info_t image_info)
 {
     errno = EXIT_SUCCESS;
 
@@ -77,4 +78,14 @@ extern int write_file_tiff(image_info_t image_info)
     TIFFClose(tif);
 
     return errno;
+}
+
+extern image_type_t *init_tiff(void)
+{
+    image_type_t *tiff = malloc(sizeof (image_type_t));
+    tiff->type = strdup("TIFF");
+    tiff->is_type = is_tiff;
+    tiff->read = read_tiff;
+    tiff->write = write_tiff;
+    return tiff;
 }

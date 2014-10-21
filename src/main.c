@@ -20,7 +20,7 @@
 
 #include "main.h"
 
-#define CAPACITY (image_info.width * image_info.height - sizeof( uint64_t ))
+#define CAPACITY (image_info.width * image_info.height - sizeof (uint64_t))
 
 static int process_file(data_info_t data_info, image_info_t image_info)
 {
@@ -116,17 +116,21 @@ int main(int argc, char **argv)
     image_info_t image_info = { image_in, NULL, NULL, 0, 0, 0, NULL, NULL };
     data_info_t data_info = { file, 0, false };
 
-    if (is_png(image_in))
-    {
-        image_info.read = read_file_png;
-        image_info.write = write_file_png;
-    }
-    else if (is_tiff(image_in))
-    {
-        image_info.read = read_file_tiff;
-        image_info.write = write_file_tiff;
-    }
-    else
+    /*
+     * TODO get details of supported images formats at runtime
+     */
+    image_type_t **supported = calloc(255, sizeof (image_type_t));
+    supported[0] = init_png();
+    supported[1] = init_tiff();
+
+    for (int i = 0; i < 255; i++)
+        if (supported[i] && supported[i]->is_type(image_in))
+        {
+            image_info.read = supported[i]->read;
+            image_info.write = supported[i]->write;
+        }
+
+    if (!(image_info.read && image_info.write))
     {
         fprintf(stderr, "Unsupported image format; please use either PNG or TIFF\n");
         return EFTYPE;
