@@ -20,39 +20,33 @@
 
 #include "main.h"
 
-static int process_file(bool store, char *file_name, uint64_t file_size, image_info_t image_info)
+static int process_file(data_info_t data_info, image_info_t image_info)
 {
     errno = EXIT_SUCCESS;
 
     int64_t f = 0;
     uint8_t *map = NULL;
 
-    if ((f = open(file_name, store ? O_RDONLY : (O_RDWR | O_CREAT), S_IRUSR | S_IWUSR)) < 0)
+    if ((f = open(data_info.file, data_info.hide ? O_RDONLY : (O_RDWR | O_CREAT), S_IRUSR | S_IWUSR)) < 0)
         return errno;
-    if (store && (map = mmap(NULL, ntohll(file_size), PROT_READ, MAP_SHARED, f, 0)) == MAP_FAILED)
+    if (data_info.hide && (map = mmap(NULL, ntohll(data_info.size), PROT_READ, MAP_SHARED, f, 0)) == MAP_FAILED)
         return errno;
 
-    uint8_t *z = (uint8_t *)&file_size;
+    uint8_t *z = (uint8_t *)&data_info.size;
     uint64_t i = 0;
-    for (uint64_t y = 0; y < image_info.pixel_height; y++)
+    for (uint64_t y = 0; y < image_info.height; y++)
     {
         uint8_t *row = image_info.buffer[y];
-        for (uint64_t x = 0; x < image_info.pixel_width; x++)
+        for (uint64_t x = 0; x < image_info.width; x++)
         {
-            uint8_t *ptr = &(row[x * image_info.bytes_per_pixel]);
+            uint8_t *ptr = &(row[x * image_info.bpp]);
 
-            if (store)
+            if (data_info.hide)
             {
-                unsigned char c = y == 0 && x < sizeof file_size ? z[x] : map[i];
-#if THIS_DIDNT_WORK_THE_IMAGE_LOOSES_TOO_MUCH_QUALITY
-                ptr[0] = (ptr[0] & 0xF0) | ((c & 0xF0) >> 4);
-                ptr[1] = (ptr[1] & 0xF0) | ((c & 0x3C) >> 2);
-                ptr[2] = (ptr[2] & 0xF0) |  (c & 0x0F);
-#else
+                unsigned char c = y == 0 && x < sizeof data_info.size ? z[x] : map[i];
                 ptr[0] = (ptr[0] & 0xF8) | ((c & 0xE0) >> 5);
                 ptr[1] = (ptr[1] & 0xFC) | ((c & 0x18) >> 3);
                 ptr[2] = (ptr[2] & 0xF8) |  (c & 0x07);
-#endif
             }
             else
             {
@@ -60,13 +54,13 @@ static int process_file(bool store, char *file_name, uint64_t file_size, image_i
                 c |= (ptr[1] & 0x03) << 3;
                 c |= (ptr[2] & 0x07);
 
-                if (y == 0 && x < sizeof file_size)
+                if (y == 0 && x < sizeof data_info.size)
                 {
                     z[x] = c;
-                    if (x == sizeof file_size - 1)
+                    if (x == sizeof data_info.size - 1)
                     {
-                        ftruncate(f, ntohll(file_size));
-                        if ((map = mmap(NULL, ntohll(file_size), PROT_READ | PROT_WRITE, MAP_SHARED, f, 0)) == MAP_FAILED)
+                        ftruncate(f, ntohll(data_info.size));
+                        if ((map = mmap(NULL, ntohll(data_info.size), PROT_READ | PROT_WRITE, MAP_SHARED, f, 0)) == MAP_FAILED)
                             goto done;
                     }
                 }
@@ -74,15 +68,15 @@ static int process_file(bool store, char *file_name, uint64_t file_size, image_i
                     map[i] = c;
             }
 
-            if (y > 0 || x >= sizeof file_size)
+            if (y > 0 || x >= sizeof data_info.size)
                 i++;
-            if (map && i >= ntohll(file_size))
+            if (map && i >= ntohll(data_info.size))
                 goto done;
         }
     }
 
 done:
-    munmap(map, ntohll(file_size));
+    munmap(map, ntohll(data_info.size));
     close(f);
     return errno;
 }
@@ -96,22 +90,22 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    char *image_in= argv[1];
+    char *image_in = argv[1];
     char *file = argv[2];
     char *image_out = argv[3];
 
-    int (*read_file_func)(char *, image_info_t *);
-    int (*write_file_func)(char *, image_info_t);
+    image_info_t image_info = { image_in, NULL, NULL, 0, 0, 0, NULL, NULL };
+    data_info_t data_info = { file, 0, false };
 
     if (is_png(image_in))
     {
-        read_file_func = read_file_png;
-        write_file_func = write_file_png;
+        image_info.read = read_file_png;
+        image_info.write = write_file_png;
     }
     else if (is_tiff(image_in))
     {
-        read_file_func = read_file_tiff;
-        write_file_func = write_file_tiff;
+        image_info.read = read_file_tiff;
+        image_info.write = write_file_tiff;
     }
     else
     {
@@ -122,8 +116,7 @@ int main(int argc, char **argv)
     /*
      * read the source image
      */
-    image_info_t image_info = { 0, 0, 0, NULL, NULL };
-    if (read_file_func(image_in, &image_info))
+    if (image_info.read(&image_info))
     {
         perror("Failed to read source image");
         return errno;
@@ -136,7 +129,7 @@ int main(int argc, char **argv)
          */
         struct stat s;
         stat(file, &s);
-        uint64_t capacity = image_info.pixel_width * image_info.pixel_height - sizeof( uint64_t );
+        uint64_t capacity = image_info.width * image_info.height - sizeof( uint64_t );
         if ((uint64_t)s.st_size > capacity)
         {
             fprintf(stderr, "Too much data to hide; available capacity: %" PRIu64 " bytes", capacity);
@@ -145,7 +138,9 @@ int main(int argc, char **argv)
         /*
          * overlay the data on the image
          */
-        if (process_file(true, file, htonll(s.st_size), image_info))
+        data_info.size = htonll(s.st_size);
+        data_info.hide = true;
+        if (process_file(data_info, image_info))
         {
             perror("Failed during data processing");
             return errno;
@@ -153,7 +148,8 @@ int main(int argc, char **argv)
         /*
          * write the image with the hidden data
          */
-        if (write_file_func(image_out, image_info))
+        image_info.file = image_out;
+        if (image_info.write(image_info))
         {
             perror("Failed to write output image");
             return errno;
@@ -164,7 +160,7 @@ int main(int argc, char **argv)
         /*
          * extract the hidden data
          */
-        if (process_file(false, file, 0, image_info))
+        if (process_file(data_info, image_info))
         {
             perror("Failed during data processing");
             return errno;

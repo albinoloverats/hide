@@ -25,11 +25,11 @@ extern bool is_png(char *file_name)
     return !png_sig_cmp(header, 0, 8);
 }
 
-extern int read_file_png(char *file_name, image_info_t *image_info)
+extern int read_file_png(image_info_t *image_info)
 {
     errno = EXIT_SUCCESS;
 
-    FILE *fp = fopen(file_name, "rb");
+    FILE *fp = fopen(image_info->file, "rb");
     if (!fp)
         return errno;
 
@@ -57,8 +57,8 @@ extern int read_file_png(char *file_name, image_info_t *image_info)
 
     png_read_info(png_ptr, info_ptr);
 
-    image_info->pixel_width = png_get_image_width(png_ptr, info_ptr);
-    image_info->pixel_height = png_get_image_height(png_ptr, info_ptr);
+    image_info->width = png_get_image_width(png_ptr, info_ptr);
+    image_info->height = png_get_image_height(png_ptr, info_ptr);
     png_byte bit_depth = png_get_bit_depth(png_ptr, info_ptr);
     image_info->extra = malloc(sizeof bit_depth);
     memcpy(image_info->extra, &bit_depth, sizeof bit_depth);
@@ -66,10 +66,10 @@ extern int read_file_png(char *file_name, image_info_t *image_info)
     switch (png_get_color_type(png_ptr, info_ptr))
     {
         case PNG_COLOR_TYPE_RGB:
-            image_info->bytes_per_pixel = 3;
+            image_info->bpp = 3;
             break;
         case PNG_COLOR_TYPE_RGBA:
-            image_info->bytes_per_pixel = 4;
+            image_info->bpp = 4;
             break;
         default:
             goto cleanup;
@@ -82,9 +82,9 @@ extern int read_file_png(char *file_name, image_info_t *image_info)
     if (setjmp(png_jmpbuf(png_ptr)))
         goto cleanup;
 
-    image_info->buffer = (uint8_t **)malloc(sizeof( uint8_t * ) * image_info->pixel_height);
-    for (uint64_t y = 0; y < image_info->pixel_height; y++)
-        image_info->buffer[y] = malloc(image_info->pixel_width * image_info->bytes_per_pixel);
+    image_info->buffer = (uint8_t **)malloc(sizeof( uint8_t * ) * image_info->height);
+    for (uint64_t y = 0; y < image_info->height; y++)
+        image_info->buffer[y] = malloc(image_info->width * image_info->bpp);
 
     png_read_image(png_ptr, image_info->buffer);
 
@@ -96,12 +96,12 @@ cf:
     return errno;
 }
 
-extern int write_file_png(char *file_name, image_info_t image_info)
+extern int write_file_png(image_info_t image_info)
 {
     errno = EXIT_SUCCESS;
 
     /* create file */
-    FILE *fp = fopen(file_name, "wb");
+    FILE *fp = fopen(image_info.file, "wb");
     if (!fp)
         return errno;
 
@@ -126,7 +126,7 @@ extern int write_file_png(char *file_name, image_info_t image_info)
         goto cleanup;
 
     png_byte color_type;
-    switch (image_info.bytes_per_pixel)
+    switch (image_info.bpp)
     {
         case 3:
             color_type = PNG_COLOR_TYPE_RGB;
@@ -140,7 +140,7 @@ extern int write_file_png(char *file_name, image_info_t image_info)
 
     png_byte bit_depth;
     memcpy(&bit_depth, image_info.extra, sizeof bit_depth);
-    png_set_IHDR(png_ptr, info_ptr, image_info.pixel_width, image_info.pixel_height, bit_depth,
+    png_set_IHDR(png_ptr, info_ptr, image_info.width, image_info.height, bit_depth,
              color_type, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
     free(image_info.extra);
 
@@ -159,7 +159,7 @@ extern int write_file_png(char *file_name, image_info_t image_info)
     png_write_end(png_ptr, NULL);
 
     /* clean up heap allocation */
-    for (uint64_t y = 0; y < image_info.pixel_height; y++)
+    for (uint64_t y = 0; y < image_info.height; y++)
         free(image_info.buffer[y]);
     free(image_info.buffer);
 

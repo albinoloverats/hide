@@ -23,22 +23,22 @@ extern bool is_tiff(char *file_name)
     return true;
 }
 
-extern int read_file_tiff(char *file_name, image_info_t *image_info)
+extern int read_file_tiff(image_info_t *image_info)
 {
     errno = EXIT_SUCCESS;
 
-    TIFF *tif = TIFFOpen(file_name, "r");
+    TIFF *tif = TIFFOpen(image_info->file, "r");
     if (!tif)
         return errno;
 
-    TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &image_info->pixel_width);
-    TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &image_info->pixel_height);
-    TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &image_info->bytes_per_pixel);
+    TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &image_info->width);
+    TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &image_info->height);
+    TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &image_info->bpp);
 
-    image_info->buffer = (uint8_t **)malloc(sizeof( uint8_t * ) * image_info->pixel_height);
-    for (uint64_t y = 0; y < image_info->pixel_height; y++)
+    image_info->buffer = (uint8_t **)malloc(sizeof( uint8_t * ) * image_info->height);
+    for (uint64_t y = 0; y < image_info->height; y++)
     {
-        image_info->buffer[y] = malloc(image_info->pixel_width * image_info->bytes_per_pixel);
+        image_info->buffer[y] = malloc(image_info->width * image_info->bpp);
         TIFFReadScanline(tif, image_info->buffer[y], y, 0);
     }
 
@@ -47,17 +47,17 @@ extern int read_file_tiff(char *file_name, image_info_t *image_info)
     return errno;
 }
 
-extern int write_file_tiff(char *file_name, image_info_t image_info)
+extern int write_file_tiff(image_info_t image_info)
 {
     errno = EXIT_SUCCESS;
 
-    TIFF *tif = TIFFOpen(file_name, "w");
+    TIFF *tif = TIFFOpen(image_info.file, "w");
     if (!tif)
         return errno;
 
-    TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, image_info.pixel_width);
-    TIFFSetField(tif, TIFFTAG_IMAGELENGTH, image_info.pixel_height);
-    TIFFSetField(tif, TIFFTAG_SAMPLESPERPIXEL, image_info.bytes_per_pixel);
+    TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, image_info.width);
+    TIFFSetField(tif, TIFFTAG_IMAGELENGTH, image_info.height);
+    TIFFSetField(tif, TIFFTAG_SAMPLESPERPIXEL, image_info.bpp);
     TIFFSetField(tif, TIFFTAG_COMPRESSION, COMPRESSION_LZMA);
 
     TIFFSetField(tif, TIFFTAG_BITSPERSAMPLE, 8);
@@ -65,9 +65,9 @@ extern int write_file_tiff(char *file_name, image_info_t image_info)
     TIFFSetField(tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
     TIFFSetField(tif, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
 
-    TIFFSetField(tif, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tif, image_info.pixel_width * image_info.bytes_per_pixel));
+    TIFFSetField(tif, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tif, image_info.width * image_info.bpp));
 
-    for (uint64_t y = 0; y < image_info.pixel_height; y++)
+    for (uint64_t y = 0; y < image_info.height; y++)
     {
         TIFFWriteScanline(tif, image_info.buffer[y], y, 0);
         free(image_info.buffer[y]);
