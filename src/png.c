@@ -10,7 +10,7 @@
 
 #include <png.h>
 
-#include "main.h"
+#include "imagine.h"
 
 static bool is_png(char *file_name)
 {
@@ -170,7 +170,7 @@ cf:
     return errno;
 }
 
-extern image_type_t *init_png(void)
+extern image_type_t *init(void)
 {
     image_type_t *png = malloc(sizeof (image_type_t));
     png->type = strdup("PNG");

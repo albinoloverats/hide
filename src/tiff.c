@@ -10,7 +10,7 @@
 
 #include <tiffio.h>
 
-#include "main.h"
+#include "imagine.h"
 
 static bool is_tiff(char *file_name)
 {
@@ -80,7 +80,7 @@ static int write_tiff(image_info_t image_info)
     return errno;
 }
 
-extern image_type_t *init_tiff(void)
+extern image_type_t *init(void)
 {
     image_type_t *tiff = malloc(sizeof (image_type_t));
     tiff->type = strdup("TIFF");

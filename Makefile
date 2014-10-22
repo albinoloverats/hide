@@ -1,13 +1,9 @@
-.PHONY: clean
+.PHONY: clean distclean
 
-APP      = imagine
-
-SOURCE   = src/main.c src/png.c src/tiff.c
-
-CFLAGS   = -Wall -Wextra -Werror -std=gnu99 `pkg-config --cflags libpng` -pipe
+CFLAGS   = -Wall -Wextra -Werror -std=gnu99  -pipe
 CPPFLAGS = -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64
 
-LIBS     = `pkg-config --libs libpng` -ltiff
+SHARED	 = -fPIC -shared -Wl,-soname,
 
 DEBUG    = -O0 -g3 -ggdb
 
@@ -16,8 +12,19 @@ DEBUG    = -O0 -g3 -ggdb
 #	-@echo "built ‘`echo $(SOURCE) $(COMMON) | sed 's/ /’\n      ‘/g'`’ → ‘$(APP)’"
 
 debug:
-	@$(CC) $(CFLAGS) $(CPPFLAGS) $(SOURCE) $(LIBS) $(DEBUG) -o $(APP)
-	-@echo "built ‘`echo $(SOURCE) | sed 's/ /’\n      ‘/g'`’ → ‘$(APP)’"
+	@$(CC) $(CFLAGS) $(CPPFLAGS) -ldl src/main.c $(DEBUG) -o imagine
+	-@echo "built ‘main.c’ → ‘imagine’"
+
+png:
+	@$(CC) -o imagine-png.so $(CFLAGS) $(CPPFLAGS) $(DEBUG) $(SHARED)imagine-png.so `pkg-config --cflags --libs libpng` src/png.c
+	-@echo "built ‘png.c’ → ‘imagine-png.so’"
+
+tiff:
+	@$(CC) -o imagine-tiff.so $(CFLAGS) $(CPPFLAGS) $(DEBUG) $(SHARED)imagine-tiff.so -ltiff src/tiff.c
+	-@echo "built ‘tiff.c’ → ‘imagine-tiff.so’"
 
 clean:
-	@rm -fv $(APP)
+	@rm -fv imagine
+
+distclean: clean
+	@rm -fv imagine-png.so imagine-tiff.so

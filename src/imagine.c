@@ -6,19 +6,17 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include <dlfcn.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <dirent.h>
 
 #include <sys/mman.h>
 #include <sys/stat.h>
 
-#ifndef _WIN32
-    #include <netinet/in.h>
-#endif
-
 #include "common/common.h"
 
-#include "main.h"
+#include "imagine.h"
 
 #define CAPACITY (image_info.width * image_info.height - sizeof (uint64_t))
 
@@ -100,6 +98,11 @@ static bool will_fit(data_info_t *data_info, image_info_t image_info)
     return true;
 }
 
+static int selector(const struct dirent *d)
+{
+    return !strncmp("imagine-", d->d_name, 8);
+}
+
 int main(int argc, char **argv)
 {
     if (argc != 3 && argc != 4)
@@ -116,19 +119,39 @@ int main(int argc, char **argv)
     image_info_t image_info = { image_in, NULL, NULL, 0, 0, 0, NULL, NULL };
     data_info_t data_info = { file, 0, false };
 
-    /*
-     * TODO get details of supported images formats at runtime
-     */
-    image_type_t **supported = calloc(255, sizeof (image_type_t));
-    supported[0] = init_png();
-    supported[1] = init_tiff();
+    void *so;
 
-    for (int i = 0; i < 255; i++)
-        if (supported[i] && supported[i]->is_type(image_in))
+    struct dirent **eps;
+    int n = scandir("./", &eps, selector, NULL);
+    for (int i = 0; i < n; ++i)
+    {
+        char *l = NULL;
+        asprintf(&l, "./%s", eps[i]->d_name); // only need this while debugging
+        if ((so = dlopen(l, RTLD_LAZY)) == NULL)
         {
-            image_info.read = supported[i]->read;
-            image_info.write = supported[i]->write;
+            perror("Could not open library");
+            return errno;
         }
+        free(l);
+        image_type_t *(*init)();
+        if (!(init = (image_type_t*(*)(void))dlsym(so, "init")))
+        {
+            perror(dlerror());
+            return errno;
+        }
+        image_type_t *format = init();
+        if (format->is_type(image_in))
+        {
+            image_info.read = format->read;
+            image_info.write = format->write;
+            break;
+        }
+        dlclose(so);
+    }
+    for (int i = 0; i < n; ++i)
+        free(eps[i]);
+    free(eps);
+
 
     if (!(image_info.read && image_info.write))
     {
@@ -182,6 +205,7 @@ int main(int argc, char **argv)
         }
     }
 
+    dlclose(so);
     fprintf(stderr, "Done.\n");
 
     return EXIT_SUCCESS;

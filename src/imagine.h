@@ -1,7 +1,8 @@
-#ifndef _INCLUDED_ALREADY_
-#define _INCLUDED_ALREADY_
+#ifndef _IMAGINE_H_
+#define _IMAGINE_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #ifndef EFTYPE
     #define EFTYPE 79 /*!< Unsupported file/image type */
@@ -33,12 +34,9 @@ typedef struct
 {
     char *type;
     bool (*is_type)(char *);
-    int (*read)(struct _image_info_t *);
-    int (*write)(struct _image_info_t);
+    int (*read)(image_info_t *);
+    int (*write)(image_info_t);
 }
 image_type_t;
-
-extern image_type_t *init_png(void);
-extern image_type_t *init_tiff(void);
 
 #endif
