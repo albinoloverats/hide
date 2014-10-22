@@ -36,7 +36,7 @@ static int read_tiff(image_info_t *image_info)
     TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &image_info->height);
     TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &image_info->bpp);
 
-    image_info->buffer = (uint8_t **)malloc(sizeof (uint8_t *) * image_info->height);
+    image_info->buffer = malloc(sizeof (uint8_t *) * image_info->height);
     for (uint64_t y = 0; y < image_info->height; y++)
     {
         image_info->buffer[y] = malloc(image_info->width * image_info->bpp);

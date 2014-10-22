@@ -103,12 +103,55 @@ static int selector(const struct dirent *d)
     return !strncmp("imagine-", d->d_name, 8);
 }
 
+static void *find_supported_formats(image_info_t *image_info)
+{
+    void *so = NULL;
+    struct dirent **eps;
+    int n = scandir("./", &eps, selector, NULL);
+    for (int i = 0; i < n; ++i)
+    {
+        char *l = NULL;
+        asprintf(&l, "./%s", eps[i]->d_name); // only need this while debugging
+        if (!image_info)
+        {
+            fprintf(stderr, "%s\n", l);
+            continue;
+        }
+        if ((so = dlopen(l, RTLD_LAZY)) == NULL)
+        {
+            perror("Could not open library");
+            return NULL;
+        }
+        free(l);
+        image_type_t *(*init)();
+        if (!(init = (image_type_t*(*)(void))dlsym(so, "init")))
+        {
+            perror(dlerror());
+            return NULL;
+        }
+        image_type_t *format = init();
+        if (format->is_type(image_info->file))
+        {
+            image_info->read = format->read;
+            image_info->write = format->write;
+            break;
+        }
+        dlclose(so);
+    }
+    for (int i = 0; i < n; ++i)
+        free(eps[i]);
+    free(eps);
+
+    return so;
+}
+
 int main(int argc, char **argv)
 {
     if (argc != 3 && argc != 4)
     {
         fprintf(stderr, "Usage: %s <source image> <data to hide> <output image>\n", argv[0]);
         fprintf(stderr, "       %s <image> <recovered data>\n", argv[0]);
+        find_supported_formats(NULL);
         return EXIT_FAILURE;
     }
 
@@ -119,43 +162,13 @@ int main(int argc, char **argv)
     image_info_t image_info = { image_in, NULL, NULL, 0, 0, 0, NULL, NULL };
     data_info_t data_info = { file, 0, false };
 
-    void *so;
-
-    struct dirent **eps;
-    int n = scandir("./", &eps, selector, NULL);
-    for (int i = 0; i < n; ++i)
-    {
-        char *l = NULL;
-        asprintf(&l, "./%s", eps[i]->d_name); // only need this while debugging
-        if ((so = dlopen(l, RTLD_LAZY)) == NULL)
-        {
-            perror("Could not open library");
-            return errno;
-        }
-        free(l);
-        image_type_t *(*init)();
-        if (!(init = (image_type_t*(*)(void))dlsym(so, "init")))
-        {
-            perror(dlerror());
-            return errno;
-        }
-        image_type_t *format = init();
-        if (format->is_type(image_in))
-        {
-            image_info.read = format->read;
-            image_info.write = format->write;
-            break;
-        }
-        dlclose(so);
-    }
-    for (int i = 0; i < n; ++i)
-        free(eps[i]);
-    free(eps);
-
+    void *so = find_supported_formats(&image_info);
+    if (!so)
+        return errno;
 
     if (!(image_info.read && image_info.write))
     {
-        fprintf(stderr, "Unsupported image format; please use either PNG or TIFF\n");
+        fprintf(stderr, "Unsupported image format\n");
         return EFTYPE;
     }
 

@@ -19,10 +19,10 @@ static bool is_png(char *file_name)
         return false;
 
     uint8_t header[8];
-    fread(header, 1, 8, fp);
+    fread(header, 1, sizeof header, fp);
     fclose(fp);
 
-    return !png_sig_cmp(header, 0, 8);
+    return !png_sig_cmp(header, 0, sizeof header);
 }
 
 static int read_png(image_info_t *image_info)
@@ -34,7 +34,7 @@ static int read_png(image_info_t *image_info)
         return errno;
 
     uint8_t header[8];
-    fread(header, 1, 8, fp);
+    fread(header, 1, sizeof header, fp);
 
     /* initialize stuff */
     png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
@@ -82,7 +82,7 @@ static int read_png(image_info_t *image_info)
     if (setjmp(png_jmpbuf(png_ptr)))
         goto cleanup;
 
-    image_info->buffer = (uint8_t **)malloc(sizeof (uint8_t *) * image_info->height);
+    image_info->buffer = malloc(sizeof (uint8_t *) * image_info->height);
     for (uint64_t y = 0; y < image_info->height; y++)
         image_info->buffer[y] = malloc(image_info->width * image_info->bpp);
 
