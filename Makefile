@@ -47,4 +47,4 @@ clean:
 	@rm -fv imagine
 
 distclean: clean
-	@rm -fv imagine-png.so imagine-tiff.so
+	@rm -fv imagine-png.so imagine-tiff.so imagine-webp.so
