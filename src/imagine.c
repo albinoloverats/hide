@@ -149,8 +149,8 @@ int main(int argc, char **argv)
 {
     if (argc != 3 && argc != 4)
     {
-        fprintf(stderr, "Usage: %s <source image> <data to hide> <output image>\n", argv[0]);
-        fprintf(stderr, "       %s <image> <recovered data>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <source image> <file to hide> <output image>\n", argv[0]);
+        fprintf(stderr, "       %s <image> <recovered file>\n", argv[0]);
         find_supported_formats(NULL);
         return EXIT_FAILURE;
     }
