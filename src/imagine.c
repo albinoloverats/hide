@@ -108,15 +108,11 @@ static void *find_supported_formats(image_info_t *image_info)
     void *so = NULL;
     struct dirent **eps;
     int n = scandir("./", &eps, selector, NULL);
+    char buffer[80] = "Supported image formats: ";
     for (int i = 0; i < n; ++i)
     {
         char *l = NULL;
         asprintf(&l, "./%s", eps[i]->d_name); // only need this while debugging
-        if (!image_info)
-        {
-            fprintf(stderr, "%s\n", l);
-            continue;
-        }
         if ((so = dlopen(l, RTLD_LAZY)) == NULL)
         {
             perror("Could not open library");
@@ -130,7 +126,17 @@ static void *find_supported_formats(image_info_t *image_info)
             return NULL;
         }
         image_type_t *format = init();
-        if (format->is_type(image_info->file))
+        if (!image_info)
+        {
+            strcat(buffer, format->type);
+            strcat(buffer, " ");
+            if (strlen(buffer) > 72)
+            {
+                fprintf(stderr, "%s\n", buffer);
+                memset(buffer, 0x00, sizeof buffer);
+            }
+        }
+        else if (format->is_type(image_info->file))
         {
             image_info->read = format->read;
             image_info->write = format->write;
@@ -138,6 +144,9 @@ static void *find_supported_formats(image_info_t *image_info)
         }
         dlclose(so);
     }
+    if (!image_info && strlen(buffer))
+        fprintf(stderr, "%s\n", buffer);
+
     for (int i = 0; i < n; ++i)
         free(eps[i]);
     free(eps);
@@ -169,6 +178,7 @@ int main(int argc, char **argv)
     if (!(image_info.read && image_info.write))
     {
         fprintf(stderr, "Unsupported image format\n");
+        find_supported_formats(NULL);
         return EFTYPE;
     }
 
