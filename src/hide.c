@@ -1,3 +1,23 @@
+/*
+ * hide ~ A tool for hiding data inside images
+ * Copyright © 2009-2014, albinoloverats ~ Software Development
+ * email: webmaster@albinoloverats.net
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
 #include <errno.h>
 
 #include <stdlib.h>
@@ -15,6 +35,7 @@
 #include <sys/stat.h>
 
 #include "common/common.h"
+#include "common/error.h"
 
 #include "hide.h"
 
@@ -31,9 +52,9 @@ static int process_file(data_info_t data_info, image_info_t image_info)
     uint8_t *map = NULL;
 
     if ((f = open(data_info.file, data_info.hide ? O_RDONLY : (O_RDWR | O_CREAT), S_IRUSR | S_IWUSR)) < 0)
-        return errno;
+        die("Could not open %s", data_info.file);
     if (data_info.hide && (map = mmap(NULL, ntohll(data_info.size), PROT_READ, MAP_SHARED, f, 0)) == MAP_FAILED)
-        return errno;
+        die("Could not map file %s into memory", data_info.file);
 
     uint8_t *z = (uint8_t *)&data_info.size;
     uint64_t i = 0;
@@ -64,7 +85,7 @@ static int process_file(data_info_t data_info, image_info_t image_info)
                     {
                         ftruncate(f, ntohll(data_info.size));
                         if ((map = mmap(NULL, ntohll(data_info.size), PROT_READ | PROT_WRITE, MAP_SHARED, f, 0)) == MAP_FAILED)
-                            goto done;
+                            die("Could not map file %s into memory", data_info.file);
                     }
                 }
                 else
@@ -126,8 +147,10 @@ static void *find_supported_formats(image_info_t *image_info)
 #endif
         if ((so = dlopen(l, RTLD_LAZY)) == NULL)
         {
-            perror("Could not open library");
-            return NULL;
+#ifdef __DEBUG__
+            free(l);
+#endif
+            continue;
         }
 #ifdef __DEBUG__
         free(l);
@@ -135,8 +158,8 @@ static void *find_supported_formats(image_info_t *image_info)
         image_type_t *(*init)();
         if (!(init = dlsym(so, "init")))
         {
-            perror(dlerror());
-            return NULL;
+            dlclose(so);
+            continue;
         }
         image_type_t *format = init();
         if (!image_info)
@@ -199,47 +222,30 @@ int main(int argc, char **argv)
      * read the source image
      */
     if (image_info.read(&image_info))
-    {
-        perror("Failed to read source image");
-        return errno;
-    }
+        die("Failed to read source image");
 
     if (argc == 4)
     {
         if (!will_fit(&data_info, image_info))
-        {
-            fprintf(stderr, "Too much data to hide; find a larger image\nAvailable capacity: %" PRIu64 " bytes\n", CAPACITY);
-            return errno;
-        }
+            die("Too much data to hide; find a larger image\nAvailable capacity: %" PRIu64 " bytes\n", CAPACITY);
         /*
          * overlay the data on the image
          */
         if (process_file(data_info, image_info))
-        {
-            perror("Failed during data processing");
-            return errno;
-        }
+            die("Failed during data processing");
         /*
          * write the image with the hidden data
          */
         image_info.file = image_out;
         if (image_info.write(image_info))
-        {
-            perror("Failed to write output image");
-            return errno;
-        }
+            die("Failed to write output image");
     }
     else
-    {
         /*
          * extract the hidden data
          */
         if (process_file(data_info, image_info))
-        {
-            perror("Failed during data processing");
-            return errno;
-        }
-    }
+            die("Failed during data processing");
 
     dlclose(so);
 

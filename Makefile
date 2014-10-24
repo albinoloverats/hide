@@ -1,6 +1,6 @@
 .PHONY: clean distclean
 
-CFLAGS   = -Wall -Wextra -Werror -std=gnu99 -pipe
+CFLAGS  += -Wall -Wextra -Werror -std=gnu99 -pipe -O2
 CPPFLAGS = -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64
 
 SHARED	 = -fPIC -shared -Wl,-soname,
@@ -10,7 +10,7 @@ DEBUG    = -D__DEBUGG__ -O0 -g3 -ggdb
 all: hide png tiff webp
 
 hide:
-	@$(CC) $(CFLAGS) $(CPPFLAGS) -ldl src/hide.c -o hide
+	@$(CC) $(CFLAGS) $(CPPFLAGS) -ldl src/hide.c src/common/error.c -o hide
 	-@echo "built ‘hide.c’ → ‘hide’"
 
 png:
@@ -28,7 +28,7 @@ webp:
 debug: debug-hide debug-png debug-tiff debug-webp
 
 debug-hide:
-	@$(CC) $(CFLAGS) $(CPPFLAGS) -ldl src/hide.c $(DEBUG) -o hide
+	@$(CC) $(CFLAGS) $(CPPFLAGS) -ldl src/hide.c src/common/error.c $(DEBUG) -o hide
 	-@echo "built ‘hide.c’ → ‘hide’"
 
 debug-png:
