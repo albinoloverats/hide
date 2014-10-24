@@ -1,0 +1,15 @@
+hide
+====
+
+hide is a steganographic tool for hiding data in images. Currently this
+is all it does. It supports PNG, TIFF and Webp images (so far) and might
+support other (lossless) image formats in the future.
+
+A list of things the hide isn't:
+
+ * An encryption tool
+ * A compression tool
+
+If you need either of these things doing (which you ideally should -
+let's not have just one layer of security but many complimentary layers)
+then checkout encrypt.
