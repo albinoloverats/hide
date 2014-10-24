@@ -11,7 +11,7 @@
 #include <webp/encode.h>
 #include <webp/decode.h>
 
-#include "imagine.h"
+#include "hide.h"
 
 static bool is_webp(char *file_name)
 {

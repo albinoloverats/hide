@@ -10,7 +10,7 @@
 
 #include <tiffio.h>
 
-#include "imagine.h"
+#include "hide.h"
 
 static bool is_tiff(char *file_name)
 {

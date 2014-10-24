@@ -16,7 +16,10 @@
 
 #include "common/common.h"
 
-#include "imagine.h"
+#include "hide.h"
+
+#define LIB_DIR "/usr/lib/"
+#define DBG_DIR "./"
 
 #define CAPACITY (image_info.width * image_info.height - sizeof (uint64_t))
 
@@ -100,27 +103,37 @@ static bool will_fit(data_info_t *data_info, image_info_t image_info)
 
 static int selector(const struct dirent *d)
 {
-    return !strncmp("imagine-", d->d_name, 8);
+    return !strncmp("hide-", d->d_name, 8);
 }
 
 static void *find_supported_formats(image_info_t *image_info)
 {
     void *so = NULL;
     struct dirent **eps;
-    int n = scandir("./", &eps, selector, NULL);
+#if !defined(__DEBUG__)
+    int n = scandir(LIB_DIR, &eps, selector, NULL);
+#else
+    int n = scandir(DBG_DIR, &eps, selector, NULL);
+#endif
     char buffer[80] = "Supported image formats: ";
     for (int i = 0; i < n; ++i)
     {
+#if !defined(__DEBUG__)
+        char *l = eps[i]->d_name;
+#else
         char *l = NULL;
-        asprintf(&l, "./%s", eps[i]->d_name); // only need this while debugging
+        asprintf(&l, "%s%s", DBG_DIR, eps[i]->d_name);
+#endif
         if ((so = dlopen(l, RTLD_LAZY)) == NULL)
         {
             perror("Could not open library");
             return NULL;
         }
+#ifdef __DEBUG__
         free(l);
+#endif
         image_type_t *(*init)();
-        if (!(init = (image_type_t*(*)(void))dlsym(so, "init")))
+        if (!(init = dlsym(so, "init")))
         {
             perror(dlerror());
             return NULL;
@@ -229,7 +242,6 @@ int main(int argc, char **argv)
     }
 
     dlclose(so);
-    fprintf(stderr, "Done.\n");
 
     return EXIT_SUCCESS;
 }

@@ -1,5 +1,5 @@
-#ifndef _IMAGINE_H_
-#define _IMAGINE_H_
+#ifndef _HIDE_H_
+#define _HIDE_H_
 
 #include <stdint.h>
 #include <stdbool.h>

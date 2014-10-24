@@ -10,7 +10,7 @@
 
 #include <png.h>
 
-#include "imagine.h"
+#include "hide.h"
 
 static bool is_png(char *file_name)
 {

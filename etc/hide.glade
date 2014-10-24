@@ -16,12 +16,12 @@
     <property name="type_hint">dialog</property>
     <property name="skip_taskbar_hint">True</property>
     <property name="skip_pager_hint">True</property>
-    <property name="program_name">imagine</property>
+    <property name="program_name">hide</property>
     <property name="version">2014.XX</property>
     <property name="copyright" translatable="yes">Copyright © 2004-2014, albinoloverats ~ Software Development</property>
-    <property name="website">https://albinoloverats.net/projects/imagine</property>
-    <property name="website_label" translatable="yes">https://albinoloverats.net/projects/imagine</property>
-    <property name="license" translatable="yes">imagine ~ a cross platform, steganographic image tool
+    <property name="website">https://albinoloverats.net/projects/hide</property>
+    <property name="website_label" translatable="yes">https://albinoloverats.net/projects/hide</property>
+    <property name="license" translatable="yes">hide ~ a cross platform, steganographic image tool
 
 Copyright © 2004-2014, albinoloverats ~ Software Development
 
@@ -37,14 +37,14 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.</property>
-    <property name="authors">imagine was written by Ashley Anderson
+    <property name="authors">hide was written by Ashley Anderson
 http://albinoloverats.net/amanderson/
 
 libgcrypt is part of GNU
 http://www.gnu.org/software/libgcrypt/</property>
     <property name="artists">The logo is part of the Crystal Icon Theme by Everaldo Coelho
 http://www.everaldo.com/</property>
-    <property name="logo">/usr/share/pixmaps/imagine.svg</property>
+    <property name="logo">/usr/share/pixmaps/hide.svg</property>
     <property name="license_type">gpl-3-0</property>
     <child internal-child="vbox">
       <object class="GtkBox" id="about_dialog_vbox">
@@ -78,7 +78,7 @@ http://www.everaldo.com/</property>
       </object>
     </child>
   </object>
-  <object class="GtkImage" id="done_imagine">
+  <object class="GtkImage" id="done_hide">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
     <property name="stock">gtk-apply</property>
@@ -125,7 +125,7 @@ http://www.everaldo.com/</property>
           <object class="GtkLabel" id="progress_dialog_label">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="label" translatable="yes">Please wait while imagine
+            <property name="label" translatable="yes">Please wait while hide
 processes your file</property>
             <property name="justify">center</property>
           </object>
@@ -184,7 +184,7 @@ processes your file</property>
             <property name="receives_default">True</property>
             <property name="halign">center</property>
             <property name="valign">center</property>
-            <property name="image">done_imagine</property>
+            <property name="image">done_hide</property>
             <signal name="clicked" handler="on_progress_button_clicked" swapped="no"/>
           </object>
           <packing>
@@ -215,9 +215,9 @@ processes your file</property>
   </object>
   <object class="GtkWindow" id="main_window">
     <property name="can_focus">False</property>
-    <property name="title" translatable="yes">imagine</property>
+    <property name="title" translatable="yes">hide</property>
     <property name="resizable">False</property>
-    <property name="icon">/usr/share/pixmaps/imagine.svg</property>
+    <property name="icon">/usr/share/pixmaps/hide.svg</property>
     <property name="gravity">center</property>
     <signal name="destroy" handler="gtk_main_quit" swapped="no"/>
     <child>
@@ -372,14 +372,14 @@ processes your file</property>
                 <property name="can_focus">False</property>
                 <property name="homogeneous">True</property>
                 <child>
-                  <object class="GtkButton" id="raw_imagine_button">
+                  <object class="GtkButton" id="raw_hide_button">
                     <property name="label" translatable="yes">Hide</property>
                     <property name="width_request">80</property>
                     <property name="height_request">28</property>
                     <property name="sensitive">False</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
-                    <signal name="clicked" handler="on_imagine_button_clicked" swapped="no"/>
+                    <signal name="clicked" handler="on_hide_button_clicked" swapped="no"/>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -395,7 +395,7 @@ processes your file</property>
                     <property name="sensitive">False</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
-                    <signal name="clicked" handler="on_imagine_button_clicked" swapped="no"/>
+                    <signal name="clicked" handler="on_hide_button_clicked" swapped="no"/>
                   </object>
                   <packing>
                     <property name="expand">False</property>

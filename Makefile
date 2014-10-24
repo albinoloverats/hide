@@ -7,44 +7,44 @@ SHARED	 = -fPIC -shared -Wl,-soname,
 
 DEBUG    = -D__DEBUGG__ -O0 -g3 -ggdb
 
-all: imagine png tiff webp
+all: hide png tiff webp
 
-imagine:
-	@$(CC) $(CFLAGS) $(CPPFLAGS) -ldl src/imagine.c -o imagine
-	-@echo "built ‘imagine.c’ → ‘imagine’"
+hide:
+	@$(CC) $(CFLAGS) $(CPPFLAGS) -ldl src/hide.c -o hide
+	-@echo "built ‘hide.c’ → ‘hide’"
 
 png:
-	@$(CC) -o imagine-png.so $(CFLAGS) $(CPPFLAGS) $(SHARED)imagine-png.so `pkg-config --cflags --libs libpng` src/png.c
-	-@echo "built ‘png.c’ → ‘imagine-png.so’"
+	@$(CC) -o hide-png.so $(CFLAGS) $(CPPFLAGS) $(SHARED)hide-png.so `pkg-config --cflags --libs libpng` src/png.c
+	-@echo "built ‘png.c’ → ‘hide-png.so’"
 
 tiff:
-	@$(CC) -o imagine-tiff.so $(CFLAGS) $(CPPFLAGS) $(SHARED)imagine-tiff.so -ltiff src/tiff.c
-	-@echo "built ‘tiff.c’ → ‘imagine-tiff.so’"
+	@$(CC) -o hide-tiff.so $(CFLAGS) $(CPPFLAGS) $(SHARED)hide-tiff.so -ltiff src/tiff.c
+	-@echo "built ‘tiff.c’ → ‘hide-tiff.so’"
 
 webp:
-	@$(CC) -o imagine-webp.so $(CFLAGS) $(CPPFLAGS) $(SHARED)imagine-webp.so -lwebp src/webp.c
-	-@echo "built ‘webp.c’ → ‘imagine-webp.so’"
+	@$(CC) -o hide-webp.so $(CFLAGS) $(CPPFLAGS) $(SHARED)hide-webp.so -lwebp src/webp.c
+	-@echo "built ‘webp.c’ → ‘hide-webp.so’"
 
-debug: debug-imagine debug-png debug-tiff debug-webp
+debug: debug-hide debug-png debug-tiff debug-webp
 
-debug-imagine:
-	@$(CC) $(CFLAGS) $(CPPFLAGS) -ldl src/imagine.c $(DEBUG) -o imagine
-	-@echo "built ‘imagine.c’ → ‘imagine’"
+debug-hide:
+	@$(CC) $(CFLAGS) $(CPPFLAGS) -ldl src/hide.c $(DEBUG) -o hide
+	-@echo "built ‘hide.c’ → ‘hide’"
 
 debug-png:
-	@$(CC) -o imagine-png.so $(CFLAGS) $(CPPFLAGS) $(DEBUG) $(SHARED)imagine-png.so `pkg-config --cflags --libs libpng` src/png.c
-	-@echo "built ‘png.c’ → ‘imagine-png.so’"
+	@$(CC) -o hide-png.so $(CFLAGS) $(CPPFLAGS) $(DEBUG) $(SHARED)hide-png.so `pkg-config --cflags --libs libpng` src/png.c
+	-@echo "built ‘png.c’ → ‘hide-png.so’"
 
 debug-tiff:
-	@$(CC) -o imagine-tiff.so $(CFLAGS) $(CPPFLAGS) $(DEBUG) $(SHARED)imagine-tiff.so -ltiff src/tiff.c
-	-@echo "built ‘tiff.c’ → ‘imagine-tiff.so’"
+	@$(CC) -o hide-tiff.so $(CFLAGS) $(CPPFLAGS) $(DEBUG) $(SHARED)hide-tiff.so -ltiff src/tiff.c
+	-@echo "built ‘tiff.c’ → ‘hide-tiff.so’"
 
 debug-webp:
-	@$(CC) -o imagine-webp.so $(CFLAGS) $(CPPFLAGS) $(DEBUG) $(SHARED)imagine-webp.so -lwebp src/webp.c
-	-@echo "built ‘webp.c’ → ‘imagine-webp.so’"
+	@$(CC) -o hide-webp.so $(CFLAGS) $(CPPFLAGS) $(DEBUG) $(SHARED)hide-webp.so -lwebp src/webp.c
+	-@echo "built ‘webp.c’ → ‘hide-webp.so’"
 
 clean:
-	@rm -fv imagine
+	@rm -fv hide
 
 distclean: clean
-	@rm -fv imagine-png.so imagine-tiff.so imagine-webp.so
+	@rm -fv hide-png.so hide-tiff.so hide-webp.so
