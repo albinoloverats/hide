@@ -5,7 +5,7 @@ CPPFLAGS = -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64
 
 SHARED	 = -fPIC -shared -Wl,-soname,
 
-DEBUG    = -D__DEBUGG__ -O0 -g3 -ggdb
+DEBUG    = -D__DEBUG__ -O0 -g3 -ggdb
 
 all: hide png tiff webp
 
