@@ -1,5 +1,5 @@
 /*
- * Copyright © 2005-2014, albinoloverats ~ Software Development
+ * Copyright © 2005-2015, albinoloverats ~ Software Development
  * email: webmaster@albinoloverats.net
  *
  * This program is free software: you can redistribute it and/or modify
@@ -23,8 +23,8 @@
 /*!
  * \file    common.h
  * \author  albinoloverats ~ Software Development
- * \date    2009-2014
- * \brief   Mostly common macros, useful when dealing with different OS's
+ * \date    2009-2015
+ * \brief   Mostly common macros, useful when dealing with different OS’s
  *
  * Various macros which help with the transition from one OS to another.
  * There were originally part of the main common library until it was
@@ -75,7 +75,7 @@
 //#if !defined _WIN32 && !defined __CYGWIN__ && !defined __APPLE__
 //    #define _(s) gettext(s) /*!< Allow use of _() to refer to gettext() */
 //#else
-    #define _(s) s /*!< Don't yet support translations on MS Windows or Apple OS X */
+    #define _(s) s /*!< Don’t yet support translations on MS Windows or Apple OS X */
 //#endif
 
 #define CONCAT(A, B) CONCAT2(A, B) /*!< Function overloading argument concatenation (part 1) */
@@ -94,7 +94,7 @@
     "You should have received a copy of the GNU General Public License\n"     \
     "along with this program.  If not, see <http://www.gnu.org/licenses/>.\n"
 
-#define PERCENT 100.0f /*<! Floating point 100% */
+#define PERCENT 100.0f /*!< Floating point 100% */
 
 #define THOUSAND                   1000 /*!< Integer value for 1 thousand */
 #define MILLION                 1000000 /*!< Integer value for 1 million (ideal for timing related things) */
@@ -105,8 +105,6 @@
 #define MEGABYTE                1048576 /*!< Bytes in a megabyte */
 #define GIGABYTE             1073741824 /*!< Bytes in a gigabyte */
 #define TERABYTE          1099511627776 /*!< Bytes in a terabyte */
-
-#define RANDOM_SEED_SIZE 3 /*!< Size of random seed value in bytes */
 
 typedef unsigned char byte_t; /*!< A byte is just 8 bits, no signedness or an other fancy stuff ;-) */
 
