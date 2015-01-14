@@ -17,8 +17,8 @@
     <property name="skip_taskbar_hint">True</property>
     <property name="skip_pager_hint">True</property>
     <property name="program_name">hide</property>
-    <property name="version">2014.XX</property>
-    <property name="copyright" translatable="yes">Copyright © 2004-2014, albinoloverats ~ Software Development</property>
+    <property name="version">2015.XX</property>
+    <property name="copyright" translatable="yes">Copyright © 2014-2015, albinoloverats ~ Software Development</property>
     <property name="website">https://albinoloverats.net/projects/hide</property>
     <property name="website_label" translatable="yes">https://albinoloverats.net/projects/hide</property>
     <property name="license" translatable="yes">hide ~ a cross platform, steganographic image tool
@@ -38,12 +38,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.</property>
     <property name="authors">hide was written by Ashley Anderson
-http://albinoloverats.net/amanderson/
-
-libgcrypt is part of GNU
-http://www.gnu.org/software/libgcrypt/</property>
-    <property name="artists">The logo is part of the Crystal Icon Theme by Everaldo Coelho
-http://www.everaldo.com/</property>
+http://ashley.anderson.io/</property>
     <property name="logo">/usr/share/pixmaps/hide.svg</property>
     <property name="license_type">gpl-3-0</property>
     <child internal-child="vbox">
@@ -213,11 +208,94 @@ processes your file</property>
       </object>
     </child>
   </object>
+  <object class="GtkFileChooserDialog" id="image_dialog">
+    <property name="width_request">640</property>
+    <property name="height_request">480</property>
+    <property name="can_focus">False</property>
+    <property name="border_width">5</property>
+    <property name="title" translatable="yes">Select Key ...</property>
+    <property name="role">GtkFileChooserDialog</property>
+    <property name="resizable">False</property>
+    <property name="modal">True</property>
+    <property name="window_position">center-on-parent</property>
+    <property name="default_width">640</property>
+    <property name="default_height">480</property>
+    <property name="destroy_with_parent">True</property>
+    <property name="icon_name">document-open</property>
+    <property name="type_hint">dialog</property>
+    <property name="skip_taskbar_hint">True</property>
+    <property name="skip_pager_hint">True</property>
+    <property name="create_folders">False</property>
+    <property name="do_overwrite_confirmation">True</property>
+    <child internal-child="vbox">
+      <object class="GtkBox" id="filechooserdialog-vbox5">
+        <property name="width_request">640</property>
+        <property name="height_request">440</property>
+        <property name="can_focus">False</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">2</property>
+        <child internal-child="action_area">
+          <object class="GtkButtonBox" id="filechooserdialog-action_area5">
+            <property name="can_focus">False</property>
+            <property name="layout_style">end</property>
+            <child>
+              <object class="GtkButton" id="image_dialog_cancel">
+                <property name="label">gtk-cancel</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="use_stock">True</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="image_dialog_okay">
+                <property name="label">gtk-open</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="can_default">True</property>
+                <property name="has_default">True</property>
+                <property name="receives_default">True</property>
+                <property name="use_stock">True</property>
+                <signal name="clicked" handler="key_dialog_okay" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="pack_type">end</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <placeholder/>
+        </child>
+      </object>
+    </child>
+    <action-widgets>
+      <action-widget response="0">image_dialog_cancel</action-widget>
+      <action-widget response="0">image_dialog_okay</action-widget>
+    </action-widgets>
+  </object>
   <object class="GtkWindow" id="main_window">
+    <property name="width_request">320</property>
+    <property name="height_request">480</property>
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">hide</property>
     <property name="resizable">False</property>
-    <property name="icon">/usr/share/pixmaps/hide.svg</property>
+    <property name="default_width">320</property>
+    <property name="default_height">480</property>
+    <property name="icon">/usr/share/pixmaps/encrypt.svg</property>
     <property name="gravity">center</property>
     <signal name="destroy" handler="gtk_main_quit" swapped="no"/>
     <child>
@@ -292,128 +370,294 @@ processes your file</property>
             <property name="can_focus">False</property>
             <property name="halign">center</property>
             <property name="valign">center</property>
-            <property name="border_width">32</property>
+            <property name="border_width">64</property>
             <property name="orientation">vertical</property>
+            <property name="homogeneous">True</property>
             <child>
-              <object class="GtkBox" id="image_box">
+              <object class="GtkButton" id="open_button">
+                <property name="width_request">160</property>
+                <property name="height_request">28</property>
                 <property name="visible">True</property>
-                <property name="can_focus">False</property>
-                <property name="homogeneous">True</property>
+                <property name="can_focus">True</property>
+                <property name="can_default">True</property>
+                <property name="has_default">True</property>
+                <property name="receives_default">True</property>
+                <property name="has_tooltip">True</property>
+                <property name="tooltip_markup" translatable="yes">Save As ...</property>
+                <property name="tooltip_text" translatable="yes">Save As ...</property>
+                <property name="image_position">right</property>
+                <signal name="clicked" handler="file_dialog_display" swapped="no"/>
                 <child>
-                  <object class="GtkButton" id="open_button">
+                  <object class="GtkHBox" id="box2">
+                    <property name="width_request">144</property>
                     <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="can_default">True</property>
-                    <property name="has_default">True</property>
-                    <property name="receives_default">True</property>
-                    <property name="has_tooltip">True</property>
-                    <property name="tooltip_markup" translatable="yes">Save As ...</property>
-                    <property name="tooltip_text" translatable="yes">Save As ...</property>
-                    <property name="image_position">right</property>
-                    <signal name="clicked" handler="file_dialog_display" swapped="no"/>
+                    <property name="can_focus">False</property>
                     <child>
-                      <object class="GtkImage" id="image1">
-                        <property name="width_request">640</property>
-                        <property name="height_request">480</property>
+                      <object class="GtkImage" id="open_file_image">
+                        <property name="can_focus">False</property>
+                        <property name="stock">gtk-file</property>
+                        <property name="icon_size">1</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="open_file_label">
+                        <property name="width_request">112</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
+                        <property name="xalign">0</property>
+                        <property name="xpad">2</property>
+                        <property name="label" translatable="yes">(None)</property>
+                        <property name="ellipsize">end</property>
+                        <property name="single_line_mode">True</property>
+                        <property name="max_width_chars">16</property>
+                      </object>
+                      <packing>
+                        <property name="expand">True</property>
+                        <property name="fill">True</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkImage" id="open_from_image">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="xalign">1</property>
                         <property name="stock">gtk-open</property>
-                        <property name="icon_size">5</property>
+                        <property name="icon_size">1</property>
                       </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">False</property>
+                        <property name="position">3</property>
+                      </packing>
                     </child>
                   </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">False</property>
-                    <property name="padding">4</property>
-                    <property name="position">0</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkButton" id="save_button">
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="can_default">True</property>
-                    <property name="has_default">True</property>
-                    <property name="receives_default">True</property>
-                    <property name="has_tooltip">True</property>
-                    <property name="tooltip_markup" translatable="yes">Save As ...</property>
-                    <property name="tooltip_text" translatable="yes">Save As ...</property>
-                    <property name="image_position">right</property>
-                    <signal name="clicked" handler="file_dialog_display" swapped="no"/>
-                    <child>
-                      <object class="GtkImage" id="image2">
-                        <property name="width_request">640</property>
-                        <property name="height_request">480</property>
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="stock">gtk-save</property>
-                        <property name="icon_size">5</property>
-                      </object>
-                    </child>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">False</property>
-                    <property name="padding">4</property>
-                    <property name="position">1</property>
-                  </packing>
                 </child>
               </object>
               <packing>
                 <property name="expand">False</property>
-                <property name="fill">False</property>
+                <property name="fill">True</property>
+                <property name="padding">4</property>
                 <property name="position">0</property>
               </packing>
             </child>
             <child>
-              <object class="GtkBox" id="button_box">
+              <object class="GtkButton" id="image_button">
+                <property name="width_request">160</property>
+                <property name="height_request">28</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="can_default">True</property>
+                <property name="has_default">True</property>
+                <property name="receives_default">True</property>
+                <property name="has_tooltip">True</property>
+                <property name="tooltip_markup" translatable="yes">Save As ...</property>
+                <property name="tooltip_text" translatable="yes">Save As ...</property>
+                <property name="image_position">right</property>
+                <signal name="clicked" handler="file_dialog_display" swapped="no"/>
+                <child>
+                  <object class="GtkHBox" id="box3">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <child>
+                      <object class="GtkImage" id="image_file_image">
+                        <property name="can_focus">False</property>
+                        <property name="stock">gtk-missing-image</property>
+                        <property name="icon_size">1</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="image_file_label">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="xalign">0</property>
+                        <property name="xpad">2</property>
+                        <property name="label" translatable="yes">(None)</property>
+                        <property name="ellipsize">end</property>
+                        <property name="single_line_mode">True</property>
+                        <property name="max_width_chars">16</property>
+                      </object>
+                      <packing>
+                        <property name="expand">True</property>
+                        <property name="fill">True</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkImage" id="image_is_image">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="xalign">1</property>
+                        <property name="stock">gtk-open</property>
+                        <property name="icon_size">1</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">False</property>
+                        <property name="position">3</property>
+                      </packing>
+                    </child>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="padding">4</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="save_button">
+                <property name="width_request">160</property>
+                <property name="height_request">28</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="can_default">True</property>
+                <property name="has_default">True</property>
+                <property name="receives_default">True</property>
+                <property name="has_tooltip">True</property>
+                <property name="tooltip_markup" translatable="yes">Save As ...</property>
+                <property name="tooltip_text" translatable="yes">Save As ...</property>
+                <property name="image_position">right</property>
+                <signal name="clicked" handler="file_dialog_display" swapped="no"/>
+                <child>
+                  <object class="GtkHBox" id="box1">
+                    <property name="width_request">144</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <child>
+                      <object class="GtkImage" id="save_file_image">
+                        <property name="can_focus">False</property>
+                        <property name="stock">gtk-file</property>
+                        <property name="icon_size">1</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="save_file_label">
+                        <property name="width_request">112</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="xalign">0</property>
+                        <property name="xpad">2</property>
+                        <property name="label" translatable="yes">(None)</property>
+                        <property name="ellipsize">end</property>
+                        <property name="single_line_mode">True</property>
+                        <property name="max_width_chars">24</property>
+                      </object>
+                      <packing>
+                        <property name="expand">True</property>
+                        <property name="fill">True</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkImage" id="save_as_image">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="xalign">1</property>
+                        <property name="stock">gtk-save-as</property>
+                        <property name="icon_size">1</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">False</property>
+                        <property name="position">3</property>
+                      </packing>
+                    </child>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="padding">4</property>
+                <property name="position">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="preview_button">
+                <property name="label" translatable="yes">Preview</property>
+                <property name="width_request">80</property>
+                <property name="height_request">28</property>
+                <property name="visible">True</property>
+                <property name="sensitive">False</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="halign">center</property>
+                <property name="valign">center</property>
+                <signal name="clicked" handler="preview_dialog_display" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">3</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkBox" id="go_buttons">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="homogeneous">True</property>
                 <child>
-                  <object class="GtkButton" id="raw_hide_button">
+                  <object class="GtkButton" id="hide_button">
                     <property name="label" translatable="yes">Hide</property>
                     <property name="width_request">80</property>
                     <property name="height_request">28</property>
+                    <property name="visible">True</property>
                     <property name="sensitive">False</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
-                    <signal name="clicked" handler="on_hide_button_clicked" swapped="no"/>
+                    <signal name="clicked" handler="on_go_button_clicked" swapped="no"/>
                   </object>
                   <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">False</property>
+                    <property name="expand">True</property>
+                    <property name="fill">True</property>
                     <property name="position">0</property>
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkButton" id="raw_decrypt_button">
+                  <object class="GtkButton" id="extract_button">
                     <property name="label" translatable="yes">Extract</property>
                     <property name="width_request">80</property>
                     <property name="height_request">28</property>
+                    <property name="visible">True</property>
                     <property name="sensitive">False</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
-                    <signal name="clicked" handler="on_hide_button_clicked" swapped="no"/>
+                    <signal name="clicked" handler="on_go_button_clicked" swapped="no"/>
                   </object>
                   <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">False</property>
+                    <property name="expand">True</property>
+                    <property name="fill">True</property>
                     <property name="position">1</property>
                   </packing>
                 </child>
               </object>
               <packing>
-                <property name="expand">False</property>
-                <property name="fill">False</property>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
                 <property name="padding">4</property>
-                <property name="position">1</property>
+                <property name="position">8</property>
               </packing>
             </child>
           </object>
           <packing>
-            <property name="expand">False</property>
+            <property name="expand">True</property>
             <property name="fill">False</property>
             <property name="position">1</property>
           </packing>
@@ -514,6 +758,24 @@ processes your file</property>
       <action-widget response="0">open_dialog_cancel</action-widget>
       <action-widget response="0">open_dialog_okay</action-widget>
     </action-widgets>
+  </object>
+  <object class="GtkWindow" id="preview_window">
+    <property name="can_focus">False</property>
+    <property name="title" translatable="yes">Preview</property>
+    <property name="modal">True</property>
+    <property name="window_position">center-on-parent</property>
+    <property name="default_width">800</property>
+    <property name="default_height">600</property>
+    <property name="destroy_with_parent">True</property>
+    <property name="icon_name">image-x-generic</property>
+    <child>
+      <object class="GtkImage" id="preview_image">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="stock">gtk-missing-image</property>
+        <property name="icon_size">6</property>
+      </object>
+    </child>
   </object>
   <object class="GtkFileChooserDialog" id="save_dialog">
     <property name="width_request">640</property>

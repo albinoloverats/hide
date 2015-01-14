@@ -1,7 +1,7 @@
 /*
  * hide ~ A tool for hiding data inside images
- * Copyright © 2009-2014, albinoloverats ~ Software Development
- * email: webmaster@albinoloverats.net
+ * Copyright © 2014-2015, albinoloverats ~ Software Development
+ * email: hide@albinoloverats.net
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,7 +46,7 @@ static bool is_webp(char *file_name)
     return WebPGetInfo(header, sizeof header, NULL, NULL);
 }
 
-static int read_webp(image_info_t *image_info)
+static int read_webp(image_info_t *image_info, void (*progress_update)(uint64_t, uint64_t))
 {
     errno = EXIT_SUCCESS;
 
@@ -82,13 +82,15 @@ static int read_webp(image_info_t *image_info)
     {
         image_info->buffer[y] = malloc(l);
         memcpy(image_info->buffer[y], img + y * l, l);
+        if (progress_update)
+            progress_update(y, image_info->height);
     }
     free(img);
 
     return errno;
 }
 
-static int write_webp(image_info_t image_info)
+static int write_webp(image_info_t image_info, void (*progress_update)(uint64_t, uint64_t))
 {
     errno = EXIT_SUCCESS;
 
@@ -103,6 +105,8 @@ static int write_webp(image_info_t image_info)
     {
         memcpy(img + y * l, image_info.buffer[y], l);
         free(image_info.buffer[y]);
+        if (progress_update)
+            progress_update(y, image_info.height);
     }
     free(image_info.buffer);
 

@@ -1,5 +1,4 @@
-src/common/cli.c
-src/common/cli.h
+# common files we don’t use
 src/common/fs.c
 src/common/fs.h
 src/common/tlv.c
@@ -8,5 +7,9 @@ src/common/version.c
 src/common/version.h
 src/common/win32_ext.c
 src/common/win32_ext.h
-src/common/apple.c
-src/common/apple.h
+src/common/dir.c
+src/common/dir.h
+src/common/non-gnu.c
+src/common/non-gnu.h
+src/common/rand.c
+src/common/rand.h

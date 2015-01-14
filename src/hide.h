@@ -1,7 +1,7 @@
 /*
  * hide ~ A tool for hiding data inside images
- * Copyright © 2009-2014, albinoloverats ~ Software Development
- * email: webmaster@albinoloverats.net
+ * Copyright © 2014-2015, albinoloverats ~ Software Development
+ * email: hide@albinoloverats.net
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,8 +32,8 @@
 typedef struct _image_info_t
 {
     char *file;
-    int (*read)(struct _image_info_t *);
-    int (*write)(struct _image_info_t);
+    int (*read)(struct _image_info_t *, void (*progress_update)(uint64_t, uint64_t));
+    int (*write)(struct _image_info_t, void (*progress_update)(uint64_t, uint64_t));
     uint64_t height;
     uint64_t width;
     uint16_t bpp;
@@ -54,9 +54,19 @@ typedef struct
 {
     char *type;
     bool (*is_type)(char *);
-    int (*read)(image_info_t *);
-    int (*write)(image_info_t);
+    int (*read)(image_info_t *, void (*progress_update)(uint64_t, uint64_t));
+    int (*write)(image_info_t, void (*progress_update)(uint64_t, uint64_t));
 }
 image_type_t;
+
+typedef struct
+{
+    char *image_in;
+    char *file;
+    char *image_out;
+}
+hide_files_t;
+
+extern void *process(void *files);
 
 #endif

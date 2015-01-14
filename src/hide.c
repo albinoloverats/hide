@@ -1,7 +1,7 @@
 /*
  * hide ~ A tool for hiding data inside images
- * Copyright © 2009-2014, albinoloverats ~ Software Development
- * email: webmaster@albinoloverats.net
+ * Copyright © 2014-2015, albinoloverats ~ Software Development
+ * email: hide@albinoloverats.net
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,21 +30,33 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <pthread.h>
 
 #include <sys/mman.h>
 #include <sys/stat.h>
 
 #include "common/common.h"
 #include "common/error.h"
+#include "common/cli.h"
 
 #include "hide.h"
 
-#define LIB_DIR "/usr/lib/"
-#define DBG_DIR "./"
+#ifdef BUILD_GUI
+    #include "gui-gtk.h"
+#endif
+
+
+#ifndef __DEBUG__
+    #define LIB_DIR "/usr/lib/"
+#else
+    #define LIB_DIR "./"
+#endif
 
 #define CAPACITY (image_info.width * image_info.height - sizeof (uint64_t))
 
-static int process_file(data_info_t data_info, image_info_t image_info)
+static cli_t ui;
+
+static int process_file(data_info_t data_info, image_info_t image_info, void (*progress_update)(uint64_t, uint64_t))
 {
     errno = EXIT_SUCCESS;
 
@@ -58,6 +70,7 @@ static int process_file(data_info_t data_info, image_info_t image_info)
 
     uint8_t *z = (uint8_t *)&data_info.size;
     uint64_t i = 0;
+
     for (uint64_t y = 0; y < image_info.height; y++)
     {
         uint8_t *row = image_info.buffer[y];
@@ -93,7 +106,10 @@ static int process_file(data_info_t data_info, image_info_t image_info)
             }
 
             if (y > 0 || x >= sizeof data_info.size)
+            {
                 i++;
+                progress_update(i, ntohll(data_info.size));
+            }
             if (map && i >= ntohll(data_info.size))
                 goto done;
         }
@@ -124,37 +140,25 @@ static bool will_fit(data_info_t *data_info, image_info_t image_info)
 
 static int selector(const struct dirent *d)
 {
-    return !strncmp("hide-", d->d_name, 8);
+    return !strncmp("hide-", d->d_name, 5);
 }
 
 static void *find_supported_formats(image_info_t *image_info)
 {
     void *so = NULL;
     struct dirent **eps;
-#if !defined(__DEBUG__)
     int n = scandir(LIB_DIR, &eps, selector, NULL);
-#else
-    int n = scandir(DBG_DIR, &eps, selector, NULL);
-#endif
     char buffer[80] = "Supported image formats: ";
     for (int i = 0; i < n; ++i)
     {
-#if !defined(__DEBUG__)
+#ifndef __DEBUG__
         char *l = eps[i]->d_name;
 #else
-        char *l = NULL;
-        asprintf(&l, "%s%s", DBG_DIR, eps[i]->d_name);
+        char l[1024];
+        snprintf(l, sizeof l, "%s%s", LIB_DIR, eps[i]->d_name);
 #endif
         if ((so = dlopen(l, RTLD_LAZY)) == NULL)
-        {
-#ifdef __DEBUG__
-            free(l);
-#endif
             continue;
-        }
-#ifdef __DEBUG__
-        free(l);
-#endif
         image_type_t *(*init)();
         if (!(init = dlsym(so, "init")))
         {
@@ -190,6 +194,81 @@ static void *find_supported_formats(image_info_t *image_info)
     return so;
 }
 
+static void progress_current_update(uint64_t i, uint64_t j)
+{
+    if (i < j && i > 0)
+    {
+        ui.current->offset = i;
+        ui.current->size = j;
+    }
+    return;
+}
+
+extern void *process(void *args)
+{
+    hide_files_t *files = args;
+    image_info_t image_info = { files->image_in, NULL, NULL, 0, 0, 0, NULL, NULL };
+    data_info_t data_info = { files->file, 0, false };
+
+    void *so = find_supported_formats(&image_info);
+    if (!so)
+        pthread_exit(&errno);
+
+    if (!(image_info.read && image_info.write))
+    {
+        fprintf(stderr, "Unsupported image format\n");
+        find_supported_formats(NULL);
+        errno = EFTYPE;
+        pthread_exit(&errno);
+    }
+
+    *ui.status = CLI_RUN;
+    ui.total->offset = 0;
+    ui.total->size = files->image_out ? 3 : 2;
+
+    /*
+     * read the source image
+     */
+    if (image_info.read(&image_info, progress_current_update))
+        die("Failed to read source image");
+
+    if (files->image_out)
+    {
+        if (!will_fit(&data_info, image_info))
+            die("Too much data to hide; find a larger image\nAvailable capacity: %" PRIu64 " bytes\n", CAPACITY);
+        /*
+         * overlay the data on the image
+         */
+        ui.total->offset++;
+        if (process_file(data_info, image_info, progress_current_update))
+            die("Failed during data processing");
+        /*
+         * write the image with the hidden data
+         */
+        ui.total->offset++;
+        image_info.file = files->image_out;
+        if (image_info.write(image_info, progress_current_update))
+            die("Failed to write output image");
+    }
+    else
+    {
+        /*
+         * extract the hidden data
+         */
+        ui.total->offset++;
+        if (process_file(data_info, image_info, progress_current_update))
+            die("Failed during data processing");
+    }
+
+    ui.total->offset = ui.total->size;
+
+    dlclose(so);
+
+    *ui.status = CLI_DONE;
+    errno = EXIT_SUCCESS;
+    pthread_exit(&errno);
+}
+
 int main(int argc, char **argv)
 {
     if (argc != 3 && argc != 4)
@@ -200,54 +279,32 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    char *image_in = argv[1];
-    char *file = argv[2];
-    char *image_out = argv[3];
-
-    image_info_t image_info = { image_in, NULL, NULL, 0, 0, 0, NULL, NULL };
-    data_info_t data_info = { file, 0, false };
-
-    void *so = find_supported_formats(&image_info);
-    if (!so)
-        return errno;
-
-    if (!(image_info.read && image_info.write))
     {
-        fprintf(stderr, "Unsupported image format\n");
-        find_supported_formats(NULL);
-        return EFTYPE;
+        cli_status_e ui_status = CLI_INIT;
+        cli_progress_t ui_current = { 0, 1 }; /* updated after reading image */
+        cli_progress_t ui_total = { 0, 3 }; /* maximum of 3 steps (read, update, write) */
+        ui.status = &ui_status;
+        ui.current = &ui_current;
+        ui.total = &ui_total;
     }
 
+    hide_files_t files = { argv[1], argv[2], argv[3] };
     /*
-     * read the source image
+     * TODO start process() in own thread, then call cli_display()
+     *
+     * remember that process() will have to set the status once it's finished
      */
-    if (image_info.read(&image_info))
-        die("Failed to read source image");
 
-    if (argc == 4)
-    {
-        if (!will_fit(&data_info, image_info))
-            die("Too much data to hide; find a larger image\nAvailable capacity: %" PRIu64 " bytes\n", CAPACITY);
-        /*
-         * overlay the data on the image
-         */
-        if (process_file(data_info, image_info))
-            die("Failed during data processing");
-        /*
-         * write the image with the hidden data
-         */
-        image_info.file = image_out;
-        if (image_info.write(image_info))
-            die("Failed to write output image");
-    }
-    else
-        /*
-         * extract the hidden data
-         */
-        if (process_file(data_info, image_info))
-            die("Failed during data processing");
+    pthread_t *t = calloc(1, sizeof( pthread_t ));
+    pthread_attr_t a;
+    pthread_attr_init(&a);
+    pthread_attr_setdetachstate(&a, PTHREAD_CREATE_JOINABLE);
+    pthread_create(t, &a, process, &files);
+    pthread_attr_destroy(&a);
 
-    dlclose(so);
+    cli_display(&ui);
 
-    return EXIT_SUCCESS;
+    pthread_join(*t, NULL);
+
+    return errno;
 }

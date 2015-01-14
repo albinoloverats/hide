@@ -1,7 +1,7 @@
 /*
  * hide ~ A tool for hiding data inside images
- * Copyright © 2009-2014, albinoloverats ~ Software Development
- * email: webmaster@albinoloverats.net
+ * Copyright © 2014-2015, albinoloverats ~ Software Development
+ * email: hide@albinoloverats.net
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -44,7 +44,7 @@ static bool is_tiff(char *file_name)
     return true;
 }
 
-static int read_tiff(image_info_t *image_info)
+static int read_tiff(image_info_t *image_info, void (*progress_update)(uint64_t, uint64_t))
 {
     errno = EXIT_SUCCESS;
 
@@ -61,6 +61,8 @@ static int read_tiff(image_info_t *image_info)
     {
         image_info->buffer[y] = malloc(image_info->width * image_info->bpp);
         TIFFReadScanline(tif, image_info->buffer[y], y, 0);
+        if (progress_update)
+            progress_update(y, image_info->height);
     }
 
     TIFFClose(tif);
@@ -68,7 +70,7 @@ static int read_tiff(image_info_t *image_info)
     return errno;
 }
 
-static int write_tiff(image_info_t image_info)
+static int write_tiff(image_info_t image_info, void (*progress_update)(uint64_t, uint64_t))
 {
     errno = EXIT_SUCCESS;
 
@@ -92,6 +94,8 @@ static int write_tiff(image_info_t image_info)
     {
         TIFFWriteScanline(tif, image_info.buffer[y], y, 0);
         free(image_info.buffer[y]);
+        if (progress_update)
+            progress_update(y, image_info.height);
     }
     free(image_info.buffer);
 

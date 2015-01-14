@@ -1,8 +1,11 @@
 .PHONY: clean distclean
 
+SOURCE   = src/hide.c src/common/error.c src/common/cli.c
+
 CFLAGS  += -Wall -Wextra -Werror -std=gnu99 -pipe -O2
 CPPFLAGS = -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64
 
+LIBS	 = -ldl -lpthread
 SHARED	 = -fPIC -shared -Wl,-soname,
 
 DEBUG    = -D__DEBUG__ -O0 -g3 -ggdb
@@ -10,8 +13,12 @@ DEBUG    = -D__DEBUG__ -O0 -g3 -ggdb
 all: hide png tiff webp
 
 hide:
-	@$(CC) $(CFLAGS) $(CPPFLAGS) -ldl src/hide.c src/common/error.c -o hide
-	-@echo "built ‘hide.c’ → ‘hide’"
+	@$(CC) $(CFLAGS) $(CPPFLAGS) $(LIBS) $(SOURCE) -o hide
+	-@echo "built ‘$(SOURCE)’ → ‘hide’"
+
+#hide-gui:
+#	@$(CC) $(CFLAGS) $(CPPFLAGS) $(LIBS) $(SOURCE) src/gui-gtk.c -o hide
+#	-@echo "built ‘$(SOURCE) src/gui-gtk.c’ → ‘hide’"
 
 png:
 	@$(CC) -o hide-png.so $(CFLAGS) $(CPPFLAGS) $(SHARED)hide-png.so `pkg-config --cflags --libs libpng` src/png.c
@@ -28,8 +35,12 @@ webp:
 debug: debug-hide debug-png debug-tiff debug-webp
 
 debug-hide:
-	@$(CC) $(CFLAGS) $(CPPFLAGS) -ldl src/hide.c src/common/error.c $(DEBUG) -o hide
-	-@echo "built ‘hide.c’ → ‘hide’"
+	@$(CC) $(CFLAGS) $(CPPFLAGS) $(LIBS) $(SOURCE) $(DEBUG) -o hide
+	-@echo "built ‘$(SOURCE)’ → ‘hide’"
+
+#debug-hide-gui:
+#	@$(CC) $(CFLAGS) $(CPPFLAGS) $(LIBS) $(SOURCE) src/gui-gtk.c $(DEBUG) -o hide
+#	-@echo "built ‘$(SOURCE) src/gui-gtk.c’ → ‘hide’"
 
 debug-png:
 	@$(CC) -o hide-png.so $(CFLAGS) $(CPPFLAGS) $(DEBUG) $(SHARED)hide-png.so `pkg-config --cflags --libs libpng` src/png.c

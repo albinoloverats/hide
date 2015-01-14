@@ -1,7 +1,7 @@
 /*
  * hide ~ A tool for hiding data inside images
- * Copyright © 2009-2014, albinoloverats ~ Software Development
- * email: webmaster@albinoloverats.net
+ * Copyright © 2014-2015, albinoloverats ~ Software Development
+ * email: hide@albinoloverats.net
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,7 +45,7 @@ static bool is_png(char *file_name)
     return !png_sig_cmp(header, 0, sizeof header);
 }
 
-static int read_png(image_info_t *image_info)
+static int read_png(image_info_t *image_info, void (*progress_update)(uint64_t, uint64_t))
 {
     errno = EXIT_SUCCESS;
 
@@ -104,7 +104,11 @@ static int read_png(image_info_t *image_info)
 
     image_info->buffer = malloc(sizeof (uint8_t *) * image_info->height);
     for (uint64_t y = 0; y < image_info->height; y++)
+    {
         image_info->buffer[y] = malloc(image_info->width * image_info->bpp);
+        if (progress_update)
+            progress_update(y, image_info->height);
+    }
 
     png_read_image(png_ptr, image_info->buffer);
 
@@ -116,7 +120,7 @@ cf:
     return errno;
 }
 
-static int write_png(image_info_t image_info)
+static int write_png(image_info_t image_info, void (*progress_update)(uint64_t, uint64_t))
 {
     errno = EXIT_SUCCESS;
 
@@ -180,7 +184,11 @@ static int write_png(image_info_t image_info)
 
     /* clean up heap allocation */
     for (uint64_t y = 0; y < image_info.height; y++)
+    {
         free(image_info.buffer[y]);
+        if (progress_update)
+            progress_update(y, image_info.height);
+    }
     free(image_info.buffer);
 
 cleanup:
