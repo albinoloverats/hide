@@ -13,3 +13,5 @@ src/common/non-gnu.c
 src/common/non-gnu.h
 src/common/rand.c
 src/common/rand.h
+src/common/ccrypt.c
+src/common/ccrypt.h
