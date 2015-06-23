@@ -5,8 +5,8 @@ SOURCE   = src/hide.c src/common/error.c src/common/cli.c
 CFLAGS  += -Wall -Wextra -Werror -std=gnu99 -pipe -O2
 CPPFLAGS = -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64
 
-LIBS	 = -ldl -lpthread
-SHARED	 = -fPIC -shared -Wl,-soname,
+LIBS     = -ldl -lpthread
+SHARED   = -fPIC -shared -Wl,-soname,
 
 DEBUG    = -D__DEBUG__ -O0 -g3 -ggdb
 
