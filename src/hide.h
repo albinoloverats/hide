@@ -25,45 +25,45 @@
 #include <stdbool.h>
 
 #ifndef EFTYPE
-    #define EFTYPE 79 /*!< Unsupported file/image type */
+	#define EFTYPE 79 /*!< Unsupported file/image type */
 #endif
 
 
 typedef struct _image_info_t
 {
-    char *file;
-    int (*read)(struct _image_info_t *, void (*progress_update)(uint64_t, uint64_t));
-    int (*write)(struct _image_info_t, void (*progress_update)(uint64_t, uint64_t));
-    uint64_t height;
-    uint64_t width;
-    uint16_t bpp;
-    uint8_t **buffer;
-    void *extra;
+	char *file;
+	int (*read)(struct _image_info_t *, void (*progress_update)(uint64_t, uint64_t));
+	int (*write)(struct _image_info_t, void (*progress_update)(uint64_t, uint64_t));
+	uint64_t height;
+	uint64_t width;
+	uint16_t bpp;
+	uint8_t **buffer;
+	void *extra;
 }
 image_info_t;
 
 typedef struct
 {
-    char *file;
-    uint64_t size;
-    bool hide;
+	char *file;
+	uint64_t size;
+	bool hide;
 }
 data_info_t;
 
 typedef struct
 {
-    char *type;
-    bool (*is_type)(char *);
-    int (*read)(image_info_t *, void (*progress_update)(uint64_t, uint64_t));
-    int (*write)(image_info_t, void (*progress_update)(uint64_t, uint64_t));
+	char *type;
+	bool (*is_type)(char *);
+	int (*read)(image_info_t *, void (*progress_update)(uint64_t, uint64_t));
+	int (*write)(image_info_t, void (*progress_update)(uint64_t, uint64_t));
 }
 image_type_t;
 
 typedef struct
 {
-    char *image_in;
-    char *file;
-    char *image_out;
+	char *image_in;
+	char *file;
+	char *image_out;
 }
 hide_files_t;
 

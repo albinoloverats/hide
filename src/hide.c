@@ -42,14 +42,14 @@
 #include "hide.h"
 
 #ifdef BUILD_GUI
-    #include "gui-gtk.h"
+	#include "gui-gtk.h"
 #endif
 
 
 #ifndef __DEBUG__
-    #define LIB_DIR "/usr/lib/"
+	#define LIB_DIR "/usr/lib/"
 #else
-    #define LIB_DIR "./"
+	#define LIB_DIR "./"
 #endif
 
 #define CAPACITY (image_info.width * image_info.height - sizeof (uint64_t))
@@ -58,253 +58,253 @@ static cli_t ui;
 
 static int process_file(data_info_t data_info, image_info_t image_info, void (*progress_update)(uint64_t, uint64_t))
 {
-    errno = EXIT_SUCCESS;
+	errno = EXIT_SUCCESS;
 
-    int64_t f = 0;
-    uint8_t *map = NULL;
+	int64_t f = 0;
+	uint8_t *map = NULL;
 
-    if ((f = open(data_info.file, data_info.hide ? O_RDONLY : (O_RDWR | O_CREAT), S_IRUSR | S_IWUSR)) < 0)
-        die("Could not open %s", data_info.file);
-    if (data_info.hide && (map = mmap(NULL, ntohll(data_info.size), PROT_READ, MAP_SHARED, f, 0)) == MAP_FAILED)
-        die("Could not map file %s into memory", data_info.file);
+	if ((f = open(data_info.file, data_info.hide ? O_RDONLY : (O_RDWR | O_CREAT), S_IRUSR | S_IWUSR)) < 0)
+		die("Could not open %s", data_info.file);
+	if (data_info.hide && (map = mmap(NULL, ntohll(data_info.size), PROT_READ, MAP_SHARED, f, 0)) == MAP_FAILED)
+		die("Could not map file %s into memory", data_info.file);
 
-    uint8_t *z = (uint8_t *)&data_info.size;
-    uint64_t i = 0;
+	uint8_t *z = (uint8_t *)&data_info.size;
+	uint64_t i = 0;
 
-    for (uint64_t y = 0; y < image_info.height; y++)
-    {
-        uint8_t *row = image_info.buffer[y];
-        for (uint64_t x = 0; x < image_info.width; x++)
-        {
-            uint8_t *ptr = &(row[x * image_info.bpp]);
+	for (uint64_t y = 0; y < image_info.height; y++)
+	{
+		uint8_t *row = image_info.buffer[y];
+		for (uint64_t x = 0; x < image_info.width; x++)
+		{
+			uint8_t *ptr = &(row[x * image_info.bpp]);
 
-            if (data_info.hide)
-            {
-                unsigned char c = y == 0 && x < sizeof data_info.size ? z[x] : map[i];
-                ptr[0] = (ptr[0] & 0xF8) | ((c & 0xE0) >> 5);
-                ptr[1] = (ptr[1] & 0xFC) | ((c & 0x18) >> 3);
-                ptr[2] = (ptr[2] & 0xF8) |  (c & 0x07);
-            }
-            else
-            {
-                unsigned char c = (ptr[0] & 0x07) << 5;
-                c |= (ptr[1] & 0x03) << 3;
-                c |= (ptr[2] & 0x07);
+			if (data_info.hide)
+			{
+				unsigned char c = y == 0 && x < sizeof data_info.size ? z[x] : map[i];
+				ptr[0] = (ptr[0] & 0xF8) | ((c & 0xE0) >> 5);
+				ptr[1] = (ptr[1] & 0xFC) | ((c & 0x18) >> 3);
+				ptr[2] = (ptr[2] & 0xF8) |  (c & 0x07);
+			}
+			else
+			{
+				unsigned char c = (ptr[0] & 0x07) << 5;
+				c |= (ptr[1] & 0x03) << 3;
+				c |= (ptr[2] & 0x07);
 
-                if (y == 0 && x < sizeof data_info.size)
-                {
-                    z[x] = c;
-                    if (x == sizeof data_info.size - 1)
-                    {
-                        ftruncate(f, ntohll(data_info.size));
-                        if ((map = mmap(NULL, ntohll(data_info.size), PROT_READ | PROT_WRITE, MAP_SHARED, f, 0)) == MAP_FAILED)
-                            die("Could not map file %s into memory", data_info.file);
-                    }
-                }
-                else
-                    map[i] = c;
-            }
+				if (y == 0 && x < sizeof data_info.size)
+				{
+					z[x] = c;
+					if (x == sizeof data_info.size - 1)
+					{
+						ftruncate(f, ntohll(data_info.size));
+						if ((map = mmap(NULL, ntohll(data_info.size), PROT_READ | PROT_WRITE, MAP_SHARED, f, 0)) == MAP_FAILED)
+							die("Could not map file %s into memory", data_info.file);
+					}
+				}
+				else
+					map[i] = c;
+			}
 
-            if (y > 0 || x >= sizeof data_info.size)
-            {
-                i++;
-                progress_update(i, ntohll(data_info.size));
-            }
-            if (map && i >= ntohll(data_info.size))
-                goto done;
-        }
-    }
+			if (y > 0 || x >= sizeof data_info.size)
+			{
+				i++;
+				progress_update(i, ntohll(data_info.size));
+			}
+			if (map && i >= ntohll(data_info.size))
+				goto done;
+		}
+	}
 
 done:
-    munmap(map, ntohll(data_info.size));
-    close(f);
-    return errno;
+	munmap(map, ntohll(data_info.size));
+	close(f);
+	return errno;
 }
 
 static bool will_fit(data_info_t *data_info, image_info_t image_info)
 {
-    /*
-     * figure out how much data we can hide
-     */
-    struct stat s;
-    stat(data_info->file, &s);
-    if ((uint64_t)s.st_size > CAPACITY)
-    {
-        errno = ENOSPC;
-        return false;
-    }
-    data_info->size = htonll(s.st_size);
-    data_info->hide = true;
-    return true;
+	/*
+	 * figure out how much data we can hide
+	 */
+	struct stat s;
+	stat(data_info->file, &s);
+	if ((uint64_t)s.st_size > CAPACITY)
+	{
+		errno = ENOSPC;
+		return false;
+	}
+	data_info->size = htonll(s.st_size);
+	data_info->hide = true;
+	return true;
 }
 
 static int selector(const struct dirent *d)
 {
-    return !strncmp("hide-", d->d_name, 5);
+	return !strncmp("hide-", d->d_name, 5);
 }
 
 static void *find_supported_formats(image_info_t *image_info)
 {
-    void *so = NULL;
-    struct dirent **eps;
-    int n = scandir(LIB_DIR, &eps, selector, NULL);
-    char buffer[80] = "Supported image formats: ";
-    for (int i = 0; i < n; ++i)
-    {
+	void *so = NULL;
+	struct dirent **eps;
+	int n = scandir(LIB_DIR, &eps, selector, NULL);
+	char buffer[80] = "Supported image formats: ";
+	for (int i = 0; i < n; ++i)
+	{
 #ifndef __DEBUG__
-        char *l = eps[i]->d_name;
+		char *l = eps[i]->d_name;
 #else
-        char l[1024];
-        snprintf(l, sizeof l, "%s%s", LIB_DIR, eps[i]->d_name);
+		char l[1024];
+		snprintf(l, sizeof l, "%s%s", LIB_DIR, eps[i]->d_name);
 #endif
-        if ((so = dlopen(l, RTLD_LAZY)) == NULL)
-            continue;
-        image_type_t *(*init)();
-        if (!(init = dlsym(so, "init")))
-        {
-            dlclose(so);
-            continue;
-        }
-        image_type_t *format = init();
-        if (!image_info)
-        {
-            strcat(buffer, format->type);
-            strcat(buffer, " ");
-            if (strlen(buffer) > 72)
-            {
-                fprintf(stderr, "%s\n", buffer);
-                memset(buffer, 0x00, sizeof buffer);
-            }
-        }
-        else if (format->is_type(image_info->file))
-        {
-            image_info->read = format->read;
-            image_info->write = format->write;
-            break;
-        }
-        dlclose(so);
-    }
-    if (!image_info && strlen(buffer))
-        fprintf(stderr, "%s\n", buffer);
+		if ((so = dlopen(l, RTLD_LAZY)) == NULL)
+			continue;
+		image_type_t *(*init)();
+		if (!(init = dlsym(so, "init")))
+		{
+			dlclose(so);
+			continue;
+		}
+		image_type_t *format = init();
+		if (!image_info)
+		{
+			strcat(buffer, format->type);
+			strcat(buffer, " ");
+			if (strlen(buffer) > 72)
+			{
+				fprintf(stderr, "%s\n", buffer);
+				memset(buffer, 0x00, sizeof buffer);
+			}
+		}
+		else if (format->is_type(image_info->file))
+		{
+			image_info->read = format->read;
+			image_info->write = format->write;
+			break;
+		}
+		dlclose(so);
+	}
+	if (!image_info && strlen(buffer))
+		fprintf(stderr, "%s\n", buffer);
 
-    for (int i = 0; i < n; ++i)
-        free(eps[i]);
-    free(eps);
+	for (int i = 0; i < n; ++i)
+		free(eps[i]);
+	free(eps);
 
-    return so;
+	return so;
 }
 
 static void progress_current_update(uint64_t i, uint64_t j)
 {
-    if (i < j && i > 0)
-    {
-        ui.current->offset = i;
-        ui.current->size = j;
-    }
-    return;
+	if (i < j && i > 0)
+	{
+		ui.current->offset = i;
+		ui.current->size = j;
+	}
+	return;
 }
 
 extern void *process(void *args)
 {
-    hide_files_t *files = args;
-    image_info_t image_info = { files->image_in, NULL, NULL, 0, 0, 0, NULL, NULL };
-    data_info_t data_info = { files->file, 0, false };
+	hide_files_t *files = args;
+	image_info_t image_info = { files->image_in, NULL, NULL, 0, 0, 0, NULL, NULL };
+	data_info_t data_info = { files->file, 0, false };
 
-    void *so = find_supported_formats(&image_info);
-    if (!so)
-        pthread_exit(&errno);
+	void *so = find_supported_formats(&image_info);
+	if (!so)
+		pthread_exit(&errno);
 
-    if (!(image_info.read && image_info.write))
-    {
-        fprintf(stderr, "Unsupported image format\n");
-        find_supported_formats(NULL);
-        errno = EFTYPE;
-        pthread_exit(&errno);
-    }
+	if (!(image_info.read && image_info.write))
+	{
+		fprintf(stderr, "Unsupported image format\n");
+		find_supported_formats(NULL);
+		errno = EFTYPE;
+		pthread_exit(&errno);
+	}
 
-    *ui.status = CLI_RUN;
-    ui.total->offset = 0;
-    ui.total->size = files->image_out ? 3 : 2;
+	*ui.status = CLI_RUN;
+	ui.total->offset = 0;
+	ui.total->size = files->image_out ? 3 : 2;
 
-    /*
-     * read the source image
-     */
-    if (image_info.read(&image_info, progress_current_update))
-        die("Failed to read source image");
+	/*
+	 * read the source image
+	 */
+	if (image_info.read(&image_info, progress_current_update))
+		die("Failed to read source image");
 
-    if (files->image_out)
-    {
-        if (!will_fit(&data_info, image_info))
-            die("Too much data to hide; find a larger image\nAvailable capacity: %" PRIu64 " bytes\n", CAPACITY);
-        /*
-         * overlay the data on the image
-         */
-        ui.total->offset++;
-        if (process_file(data_info, image_info, progress_current_update))
-            die("Failed during data processing");
-        /*
-         * write the image with the hidden data
-         */
-        ui.total->offset++;
-        image_info.file = files->image_out;
-        if (image_info.write(image_info, progress_current_update))
-            die("Failed to write output image");
-    }
-    else
-    {
-        /*
-         * extract the hidden data
-         */
-        ui.total->offset++;
-        if (process_file(data_info, image_info, progress_current_update))
-            die("Failed during data processing");
-    }
+	if (files->image_out)
+	{
+		if (!will_fit(&data_info, image_info))
+			die("Too much data to hide; find a larger image\nAvailable capacity: %" PRIu64 " bytes\n", CAPACITY);
+		/*
+		 * overlay the data on the image
+		 */
+		ui.total->offset++;
+		if (process_file(data_info, image_info, progress_current_update))
+			die("Failed during data processing");
+		/*
+		 * write the image with the hidden data
+		 */
+		ui.total->offset++;
+		image_info.file = files->image_out;
+		if (image_info.write(image_info, progress_current_update))
+			die("Failed to write output image");
+	}
+	else
+	{
+		/*
+		 * extract the hidden data
+		 */
+		ui.total->offset++;
+		if (process_file(data_info, image_info, progress_current_update))
+			die("Failed during data processing");
+	}
 
-    ui.total->offset = ui.total->size;
+	ui.total->offset = ui.total->size;
 
-    dlclose(so);
+	dlclose(so);
 
-    *ui.status = CLI_DONE;
-    errno = EXIT_SUCCESS;
-    pthread_exit(&errno);
+	*ui.status = CLI_DONE;
+	errno = EXIT_SUCCESS;
+	pthread_exit(&errno);
 }
 
 int main(int argc, char **argv)
 {
-    if (argc != 3 && argc != 4)
-    {
-        fprintf(stderr, "Usage: %s <source image> <file to hide> <output image>\n", argv[0]);
-        fprintf(stderr, "       %s <image> <recovered file>\n", argv[0]);
-        find_supported_formats(NULL);
-        return EXIT_FAILURE;
-    }
+	if (argc != 3 && argc != 4)
+	{
+		fprintf(stderr, "Usage: %s <source image> <file to hide> <output image>\n", argv[0]);
+		fprintf(stderr, "       %s <image> <recovered file>\n", argv[0]);
+		find_supported_formats(NULL);
+		return EXIT_FAILURE;
+	}
 
-    {
-        cli_status_e ui_status = CLI_INIT;
-        cli_progress_t ui_current = { 0, 1 }; /* updated after reading image */
-        cli_progress_t ui_total = { 0, 3 }; /* maximum of 3 steps (read, update, write) */
-        ui.status = &ui_status;
-        ui.current = &ui_current;
-        ui.total = &ui_total;
-    }
+	{
+		cli_status_e ui_status = CLI_INIT;
+		cli_progress_t ui_current = { 0, 1 }; /* updated after reading image */
+		cli_progress_t ui_total = { 0, 3 }; /* maximum of 3 steps (read, update, write) */
+		ui.status = &ui_status;
+		ui.current = &ui_current;
+		ui.total = &ui_total;
+	}
 
-    hide_files_t files = { argv[1], argv[2], argv[3] };
-    /*
-     * TODO start process() in own thread, then call cli_display()
-     *
-     * remember that process() will have to set the status once it's finished
-     */
+	hide_files_t files = { argv[1], argv[2], argv[3] };
+	/*
+	 * TODO start process() in own thread, then call cli_display()
+	 *
+	 * remember that process() will have to set the status once it's finished
+	 */
 
-    pthread_t *t = calloc(1, sizeof( pthread_t ));
-    pthread_attr_t a;
-    pthread_attr_init(&a);
-    pthread_attr_setdetachstate(&a, PTHREAD_CREATE_JOINABLE);
-    pthread_create(t, &a, process, &files);
-    pthread_attr_destroy(&a);
+	pthread_t *t = calloc(1, sizeof( pthread_t ));
+	pthread_attr_t a;
+	pthread_attr_init(&a);
+	pthread_attr_setdetachstate(&a, PTHREAD_CREATE_JOINABLE);
+	pthread_create(t, &a, process, &files);
+	pthread_attr_destroy(&a);
 
-    cli_display(&ui);
+	cli_display(&ui);
 
-    pthread_join(*t, NULL);
+	pthread_join(*t, NULL);
 
-    return errno;
+	return errno;
 }
