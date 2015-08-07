@@ -69,28 +69,30 @@ static int process_file(data_info_t data_info, image_info_t image_info, void (*p
 		die("Could not map file %s into memory", data_info.file);
 
 	uint8_t *z = (uint8_t *)&data_info.size;
-	uint64_t i = 0;
-
-	for (uint64_t y = 0; y < image_info.height; y++)
+	for (uint64_t i = 0, y = 0; y < image_info.height; y++)
 	{
 		uint8_t *row = image_info.buffer[y];
 		for (uint64_t x = 0; x < image_info.width; x++)
 		{
 			uint8_t *ptr = &(row[x * image_info.bpp]);
 
+			/*
+			 * TODO find a better/different way to do this
+			 * for JPEG images
+			 */
+
 			if (data_info.hide)
 			{
 				unsigned char c = y == 0 && x < sizeof data_info.size ? z[x] : map[i];
-				ptr[0] = (ptr[0] & 0xF8) | ((c & 0xE0) >> 5);
-				ptr[1] = (ptr[1] & 0xFC) | ((c & 0x18) >> 3);
-				ptr[2] = (ptr[2] & 0xF8) |  (c & 0x07);
+				ptr[0] = (ptr[0] & 0xF8) | ((c & 0xE0) >> 5); // r 3 lsb
+				ptr[1] = (ptr[1] & 0xFC) | ((c & 0x18) >> 3); // g 2 lsb
+				ptr[2] = (ptr[2] & 0xF8) |  (c & 0x07);       // b 3 lsb
 			}
 			else
 			{
 				unsigned char c = (ptr[0] & 0x07) << 5;
 				c |= (ptr[1] & 0x03) << 3;
 				c |= (ptr[2] & 0x07);
-
 				if (y == 0 && x < sizeof data_info.size)
 				{
 					z[x] = c;
@@ -104,7 +106,6 @@ static int process_file(data_info_t data_info, image_info_t image_info, void (*p
 				else
 					map[i] = c;
 			}
-
 			if (y > 0 || x >= sizeof data_info.size)
 			{
 				i++;

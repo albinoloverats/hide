@@ -10,7 +10,7 @@ SHARED   = -fPIC -shared -Wl,-soname,
 
 DEBUG    = -D__DEBUG__ -O0 -g3 -ggdb
 
-all: hide png tiff webp
+all: hide jpeg png tiff webp
 
 hide:
 	@$(CC) $(CFLAGS) $(CPPFLAGS) $(LIBS) $(SOURCE) -o hide
@@ -19,6 +19,10 @@ hide:
 #hide-gui:
 #	@$(CC) $(CFLAGS) $(CPPFLAGS) $(LIBS) $(SOURCE) src/gui-gtk.c -o hide
 #	-@echo "built ‘$(SOURCE) src/gui-gtk.c’ → ‘hide’"
+
+jpeg:
+	@$(CC) -o hide-jpeg.so $(CFLAGS) $(CPPFLAGS) $(SHARED)hide-jpeg.so -ljpeg src/jpeg.c
+	-@echo "built ‘jpeg.c’ → ‘hide-jpeg.so’"
 
 png:
 	@$(CC) -o hide-png.so $(CFLAGS) $(CPPFLAGS) $(SHARED)hide-png.so `pkg-config --cflags --libs libpng` src/png.c
@@ -32,7 +36,7 @@ webp:
 	@$(CC) -o hide-webp.so $(CFLAGS) $(CPPFLAGS) $(SHARED)hide-webp.so -lwebp src/webp.c
 	-@echo "built ‘webp.c’ → ‘hide-webp.so’"
 
-debug: debug-hide debug-png debug-tiff debug-webp
+debug: debug-hide debug-jpeg debug-png debug-tiff debug-webp
 
 debug-hide:
 	@$(CC) $(CFLAGS) $(CPPFLAGS) $(LIBS) $(SOURCE) $(DEBUG) -o hide
@@ -41,6 +45,10 @@ debug-hide:
 #debug-hide-gui:
 #	@$(CC) $(CFLAGS) $(CPPFLAGS) $(LIBS) $(SOURCE) src/gui-gtk.c $(DEBUG) -o hide
 #	-@echo "built ‘$(SOURCE) src/gui-gtk.c’ → ‘hide’"
+
+debug-jpeg:
+	@$(CC) -o hide-jpeg.so $(CFLAGS) $(CPPFLAGS) $(DEBUG) $(SHARED)hide-jpeg.so -ljpeg src/jpeg.c
+	-@echo "built ‘jpeg.c’ → ‘hide-jpeg.so’"
 
 debug-png:
 	@$(CC) -o hide-png.so $(CFLAGS) $(CPPFLAGS) $(DEBUG) $(SHARED)hide-png.so `pkg-config --cflags --libs libpng` src/png.c
@@ -58,4 +66,4 @@ clean:
 	@rm -fv hide
 
 distclean: clean
-	@rm -fv hide-png.so hide-tiff.so hide-webp.so
+	@rm -fv hide-jpeg.so hide-png.so hide-tiff.so hide-webp.so
