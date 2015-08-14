@@ -128,6 +128,14 @@ static int write_jpeg(image_info_t image_info, void (*progress_update)(uint64_t,
 	return errno;
 }
 
+static uint64_t info_jpeg(image_info_t *image_info)
+{
+	bool t = true;
+	image_info->extra = &t;
+	read_jpeg(image_info, NULL);
+	return CAPACITY;
+}
+
 extern image_type_t *init(void)
 {
 	image_type_t *jpeg = malloc(sizeof (image_type_t));
@@ -135,5 +143,6 @@ extern image_type_t *init(void)
 	jpeg->is_type = is_jpeg;
 	jpeg->read = read_jpeg;
 	jpeg->write = write_jpeg;
+	jpeg->info =info_jpeg;
 	return jpeg;
 }

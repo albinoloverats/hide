@@ -120,6 +120,12 @@ static int write_webp(image_info_t image_info, void (*progress_update)(uint64_t,
 	return errno;
 }
 
+static uint64_t info_webp(image_info_t *image_info)
+{
+	read_webp(image_info, NULL);
+	return CAPACITY;
+}
+
 extern image_type_t *init(void)
 {
 	image_type_t *webp = malloc(sizeof (image_type_t));
@@ -127,5 +133,6 @@ extern image_type_t *init(void)
 	webp->is_type = is_webp;
 	webp->read = read_webp;
 	webp->write = write_webp;
+	webp->info = info_webp;
 	return webp;
 }

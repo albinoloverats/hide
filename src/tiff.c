@@ -104,6 +104,12 @@ static int write_tiff(image_info_t image_info, void (*progress_update)(uint64_t,
 	return errno;
 }
 
+static uint64_t info_tiff(image_info_t *image_info)
+{
+	read_tiff(image_info, NULL);
+	return CAPACITY;
+}
+
 extern image_type_t *init(void)
 {
 	image_type_t *tiff = malloc(sizeof (image_type_t));
@@ -111,5 +117,6 @@ extern image_type_t *init(void)
 	tiff->is_type = is_tiff;
 	tiff->read = read_tiff;
 	tiff->write = write_tiff;
+	tiff->info = info_tiff;
 	return tiff;
 }

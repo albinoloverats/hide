@@ -25,6 +25,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <string.h>
+#include <locale.h>
 
 #include <dlfcn.h>
 #include <fcntl.h>
@@ -52,6 +53,7 @@
 	#define LIB_DIR "./"
 #endif
 
+#undef CAPACITY /* here image_info isn't a pointer but a local variable */
 #define CAPACITY (image_info.width * image_info.height - sizeof (uint64_t))
 
 static cli_t ui;
@@ -145,6 +147,11 @@ static void *find_supported_formats(image_info_t *image_info)
 	struct dirent **eps;
 	int n = scandir(LIB_DIR, &eps, selector, NULL);
 	char buffer[80] = "Supported image formats: ";
+	if (n == 0)
+	{
+		fprintf(stderr, "Could not find any hide image libraries!\n");
+		return NULL;
+	}
 	for (int i = 0; i < n; ++i)
 	{
 #ifndef __DEBUG__
@@ -163,6 +170,9 @@ static void *find_supported_formats(image_info_t *image_info)
 		image_type_t *(*init)();
 		if (!(init = dlsym(so, "init")))
 		{
+#ifdef __DEBUG__
+			fprintf(stderr, "%s\n", dlerror());
+#endif
 			dlclose(so);
 			continue;
 		}
@@ -181,6 +191,7 @@ static void *find_supported_formats(image_info_t *image_info)
 		{
 			image_info->read = format->read;
 			image_info->write = format->write;
+			image_info->info = format->info;
 			break;
 		}
 		dlclose(so);
@@ -208,7 +219,7 @@ static void progress_current_update(uint64_t i, uint64_t j)
 extern void *process(void *args)
 {
 	hide_files_t *files = args;
-	image_info_t image_info = { files->image_in, NULL, NULL, 0, 0, 0, NULL, NULL };
+	image_info_t image_info = { files->image_in, NULL, NULL, NULL, 0, 0, 0, NULL, NULL };
 	data_info_t data_info = { files->file, 0, false };
 
 	void *so = find_supported_formats(&image_info);
@@ -220,12 +231,8 @@ extern void *process(void *args)
 		fprintf(stderr, "Unsupported image format\n");
 		find_supported_formats(NULL);
 		errno = EFTYPE;
-		pthread_exit(&errno);
+		goto done;
 	}
-
-	*ui.status = CLI_RUN;
-	ui.total->offset = 0;
-	ui.total->size = files->image_out ? 3 : 2;
 
 	/*
 	 * current hack for JPEG images: use ->extra to indicate whether
@@ -233,6 +240,10 @@ extern void *process(void *args)
 	 */
 	data_info.hide = (bool)files->image_out;
 	image_info.extra = &data_info.hide;
+
+	*ui.status = CLI_RUN;
+	ui.total->offset = 0;
+	ui.total->size = files->image_out ? 3 : 2;
 
 	/*
 	 * read the source image
@@ -272,17 +283,19 @@ extern void *process(void *args)
 
 	dlclose(so);
 
-	*ui.status = CLI_DONE;
 	errno = EXIT_SUCCESS;
+done:
+	*ui.status = CLI_DONE;
 	pthread_exit(&errno);
 }
 
 int main(int argc, char **argv)
 {
-	if (argc != 3 && argc != 4)
+	if (argc < 2 || argc > 4)
 	{
 		fprintf(stderr, "Usage: %s <source image> <file to hide> <output image>\n", argv[0]);
 		fprintf(stderr, "       %s <image> <recovered file>\n", argv[0]);
+		fprintf(stderr, "       %s <image>\n", argv[0]);
 		find_supported_formats(NULL);
 		return EXIT_FAILURE;
 	}
@@ -294,6 +307,24 @@ int main(int argc, char **argv)
 		ui.status = &ui_status;
 		ui.current = &ui_current;
 		ui.total = &ui_total;
+	}
+
+	if (argc == 2)
+	{
+		image_info_t image_info = { argv[1], NULL, NULL, NULL, 0, 0, 0, NULL, NULL };
+		void *so = find_supported_formats(&image_info);
+		if (!so)
+			return errno;
+		if (!(image_info.read && image_info.write))
+		{
+			fprintf(stderr, "Unsupported image format\n");
+			find_supported_formats(NULL);
+			errno = EFTYPE;
+			return errno;
+		}
+		setlocale(LC_NUMERIC, "");
+		printf("File capacity: %'" PRIu64 " bytes\n", image_info.info(&image_info));
+		return EXIT_SUCCESS;
 	}
 
 	hide_files_t files = { argv[1], argv[2], argv[3] };

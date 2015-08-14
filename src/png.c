@@ -197,6 +197,12 @@ cf:
 	return errno;
 }
 
+static uint64_t info_png(image_info_t *image_info)
+{
+	read_png(image_info, NULL);
+	return CAPACITY;
+}
+
 extern image_type_t *init(void)
 {
 	image_type_t *png = malloc(sizeof (image_type_t));
@@ -204,5 +210,6 @@ extern image_type_t *init(void)
 	png->is_type = is_png;
 	png->read = read_png;
 	png->write = write_png;
+	png->info = info_png;
 	return png;
 }
