@@ -26,27 +26,13 @@
 #include <string.h>
 #include <stdbool.h>
 #include <unistd.h>
-#include <setjmp.h>
 
-#include <jpeglib.h>
+#include "common/common.h"
 
 #include "hide.h"
-
-typedef struct
-{
-	struct jpeg_error_mgr pub;
-	jmp_buf setjmp_buffer;
-}
-jpg_err_mgr;
+#include "jpeg.h"
 
 static const char jpeg_header[] = { 0xFF, 0xD8, 0xFF };
-
-static void jpeg_error_exit(j_common_ptr ptr)
-{
-	jpg_err_mgr *myerr = (jpg_err_mgr *)ptr->err;
-	//(*ptr->err->output_message)(ptr);
-	longjmp(myerr->setjmp_buffer, 1);
-}
 
 static bool is_jpeg(char *file_name)
 {
@@ -69,48 +55,41 @@ static int read_jpeg(image_info_t *image_info, void (*progress_update)(uint64_t,
 	if (!fp)
 		return errno;
 
-	jpg_err_mgr err;
-	struct jpeg_decompress_struct jpeg_ptr;
-	/* Step 1: allocate and initialize JPEG decompression object */
+	jpeg_message_t msg = { 0x00, NULL };
+	jpeg_image_t *image = calloc(sizeof (jpeg_image_t *), 1);
+	jpeg_load_e action = *(bool *)image_info->extra ? JPEG_LOAD_READ : JPEG_LOAD_FIND;
 
-	jpeg_ptr.err = jpeg_std_error(&err.pub);
-	err.pub.error_exit = jpeg_error_exit;
-	/* Establish the setjmp return context for jpeg_error_exit to use. */
-	if (setjmp(err.setjmp_buffer))
-		goto cleanup;
-
-	jpeg_create_decompress(&jpeg_ptr);
-
-	/* Step 2: specify data source (eg, a file) */
-	jpeg_stdio_src(&jpeg_ptr, fp);
-
-	/* Step 3: read file parameters with jpeg_read_header() */
-	jpeg_read_header(&jpeg_ptr, true);
-
-	/* Step 4: set parameters for decompression */
-	/* Step 5: Start decompressor */
-	jpeg_start_decompress(&jpeg_ptr);
-
-	image_info->width = jpeg_ptr.output_width;
-	image_info->height = jpeg_ptr.output_height;
-	image_info->bpp = jpeg_ptr.output_components;
-
-	image_info->buffer = malloc(sizeof (uint8_t *) * image_info->height);
-	for (uint64_t y = 0; y < image_info->height; y++)
+	jpeg_decode_data(fp, &msg, image, action);
+	if (action == JPEG_LOAD_FIND)
 	{
-		image_info->buffer[y] = malloc(image_info->width * image_info->bpp);
-		if (progress_update)
-			progress_update(y, image_info->height);
-
-		jpeg_read_scanlines(&jpeg_ptr, &image_info->buffer[y], 1);
+		msg.size = htonll(msg.size);
+		memcpy(msg.data, &msg.size, sizeof msg.size);
+		msg.size = ntohll(msg.size) + sizeof msg.size;
 	}
+	else
+		msg.size -= sizeof msg.size; /* available capacity */
 
-	/* Step 7: Finish decompression */
-	jpeg_finish_decompress(&jpeg_ptr);
+	image_info->bpp = 3;
+	image_info->width = msg.size;
+	image_info->height = 1;
+	image_info->buffer = malloc(sizeof (uint8_t *) * image_info->height);
+	image_info->buffer[0] = malloc(image_info->width * image_info->bpp);
+	/* (if necessary) copy message.data into image_info->buffer */
+	if (msg.data)
+		for (uint64_t x = 0, i = 0; i < msg.size; x += image_info->bpp, i++)
+		{
+			image_info->buffer[0][x + 0] = (msg.data[i] & 0xE0) >> 5;
+			image_info->buffer[0][x + 1] = (msg.data[i] & 0x18) >> 3;
+			image_info->buffer[0][x + 2] = (msg.data[i] & 0x07);
+			if (progress_update)
+				progress_update(x, image_info->width);
+		}
+	else if (progress_update)
+		progress_update(image_info->width, image_info->width);
 
-cleanup:
-	/* Step 8: Release JPEG decompression object */
-	jpeg_destroy_decompress(&jpeg_ptr);
+	/* store the image data where we can get it back later */
+	image_info->extra = image;
+
 	fclose(fp);
 	return errno;
 }
@@ -119,48 +98,32 @@ static int write_jpeg(image_info_t image_info, void (*progress_update)(uint64_t,
 {
 	errno = EXIT_SUCCESS;
 
-	/* create file */
 	FILE *fp = fopen(image_info.file, "wb");
 	if (!fp)
 		return errno;
 
-	/* Step 1: allocate and initialize JPEG compression object */
-	struct jpeg_compress_struct jpeg_ptr;
-	struct jpeg_error_mgr err;
-	jpeg_ptr.err = jpeg_std_error(&err);
-	jpeg_create_compress(&jpeg_ptr);
+	jpeg_message_t msg = { image_info.width, NULL };
+	msg.data = malloc(msg.size); // total capacity
 
-	/* Step 2: specify data destination (eg, a file) */
-	jpeg_stdio_dest(&jpeg_ptr, fp);
+	/* retrieve the image data */
+	jpeg_image_t *image = image_info.extra;
 
-	/* Step 3: set parameters for compression */
-	jpeg_ptr.image_width = image_info.width;
-	jpeg_ptr.image_height = image_info.height;
-	jpeg_ptr.input_components = image_info.bpp;
-	jpeg_ptr.in_color_space = JCS_RGB;
-
-	jpeg_set_defaults(&jpeg_ptr);
-	jpeg_set_quality(&jpeg_ptr, 100, true);
-
-	/* Step 4: Start compressor */
-	jpeg_start_compress(&jpeg_ptr, true);
-
-	/* Step 5: while (scan lines remain to be written) */
-	for (uint64_t y = 0; y < image_info.height; y++)
+	/* copy message from image_info.buffer to message.data */
+	for (uint64_t x = 0, i = 0; x < image_info.width * image_info.bpp; x += image_info.bpp, i++)
 	{
-		jpeg_write_scanlines(&jpeg_ptr, &image_info.buffer[y], 1);
-
-		free(image_info.buffer[y]);
+		msg.data[i]  = (image_info.buffer[0][x + 0] & 0x07) << 5;
+		msg.data[i] |= (image_info.buffer[0][x + 1] & 0x03) << 3;
+		msg.data[i] |= (image_info.buffer[0][x + 2] & 0x07);
 		if (progress_update)
-			progress_update(y, image_info.height);
+			progress_update(x, image_info.width);
 	}
-	free(image_info.buffer);
+	/* get actual message length from data */
+	memcpy(&msg.size, msg.data, sizeof msg.size);
+	msg.size = ntohll(msg.size);
 
-	/* Step 6: Finish compression */
-	jpeg_finish_compress(&jpeg_ptr);
-	/* Step 7: release JPEG compression object */
-	jpeg_destroy_compress(&jpeg_ptr);
-	/* And we're done! */
+	/* write the message to the image */
+	jpeg_encode_data(fp, &msg, image);
+
 	fclose(fp);
 	return errno;
 }

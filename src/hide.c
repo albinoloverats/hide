@@ -76,11 +76,6 @@ static int process_file(data_info_t data_info, image_info_t image_info, void (*p
 		{
 			uint8_t *ptr = &(row[x * image_info.bpp]);
 
-			/*
-			 * TODO find a better/different way to do this
-			 * for JPEG images
-			 */
-
 			if (data_info.hide)
 			{
 				unsigned char c = y == 0 && x < sizeof data_info.size ? z[x] : map[i];
@@ -159,7 +154,12 @@ static void *find_supported_formats(image_info_t *image_info)
 		snprintf(l, sizeof l, "%s%s", LIB_DIR, eps[i]->d_name);
 #endif
 		if ((so = dlopen(l, RTLD_LAZY)) == NULL)
+		{
+#ifdef __DEBUG__
+			fprintf(stderr, "%s\n", dlerror());
+#endif
 			continue;
+		}
 		image_type_t *(*init)();
 		if (!(init = dlsym(so, "init")))
 		{
@@ -226,6 +226,13 @@ extern void *process(void *args)
 	*ui.status = CLI_RUN;
 	ui.total->offset = 0;
 	ui.total->size = files->image_out ? 3 : 2;
+
+	/*
+	 * current hack for JPEG images: use ->extra to indicate whether
+	 * hiding or finding
+	 */
+	data_info.hide = (bool)files->image_out;
+	image_info.extra = &data_info.hide;
 
 	/*
 	 * read the source image
