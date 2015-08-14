@@ -53,8 +53,8 @@
 	#define LIB_DIR "./"
 #endif
 
-#undef CAPACITY /* here image_info isn't a pointer but a local variable */
-#define CAPACITY (image_info.width * image_info.height - sizeof (uint64_t))
+#undef HIDE_CAPACITY /* here image_info isn't a pointer but a local variable */
+#define HIDE_CAPACITY (image_info.width * image_info.height - sizeof (uint64_t))
 
 static cli_t ui;
 
@@ -126,7 +126,7 @@ static bool will_fit(data_info_t *data_info, image_info_t image_info)
 	 */
 	struct stat s;
 	stat(data_info->file, &s);
-	if ((uint64_t)s.st_size > CAPACITY)
+	if ((uint64_t)s.st_size > HIDE_CAPACITY)
 	{
 		errno = ENOSPC;
 		return false;
@@ -254,7 +254,7 @@ extern void *process(void *args)
 	if (files->image_out)
 	{
 		if (!will_fit(&data_info, image_info))
-			die("Too much data to hide; find a larger image\nAvailable capacity: %" PRIu64 " bytes\n", CAPACITY);
+			die("Too much data to hide; find a larger image\nAvailable capacity: %" PRIu64 " bytes\n", HIDE_CAPACITY);
 		/*
 		 * overlay the data on the image
 		 */

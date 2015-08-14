@@ -200,7 +200,7 @@ cf:
 static uint64_t info_png(image_info_t *image_info)
 {
 	read_png(image_info, NULL);
-	return CAPACITY;
+	return HIDE_CAPACITY;
 }
 
 extern image_type_t *init(void)

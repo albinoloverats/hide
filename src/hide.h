@@ -28,7 +28,7 @@
 	#define EFTYPE 79 /*!< Unsupported file/image type */
 #endif
 
-#define CAPACITY (image_info->width * image_info->height - sizeof (uint64_t))
+#define HIDE_CAPACITY (image_info->width * image_info->height - sizeof (uint64_t))
 
 typedef struct _image_info_t
 {

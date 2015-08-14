@@ -133,7 +133,7 @@ static uint64_t info_jpeg(image_info_t *image_info)
 	bool t = true;
 	image_info->extra = &t;
 	read_jpeg(image_info, NULL);
-	return CAPACITY;
+	return HIDE_CAPACITY;
 }
 
 extern image_type_t *init(void)

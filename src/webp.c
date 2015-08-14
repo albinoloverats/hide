@@ -123,7 +123,7 @@ static int write_webp(image_info_t image_info, void (*progress_update)(uint64_t,
 static uint64_t info_webp(image_info_t *image_info)
 {
 	read_webp(image_info, NULL);
-	return CAPACITY;
+	return HIDE_CAPACITY;
 }
 
 extern image_type_t *init(void)
