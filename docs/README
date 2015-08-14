@@ -1,9 +1,11 @@
 hide
 ====
 
+Warning: hide is currently in the alpha stages of development!
+
 hide is a steganographic tool for hiding data in images. Currently this
-is all it does. It supports PNG, TIFF and Webp images (so far) and might
-support other (lossless) image formats in the future.
+is all it does. It (currently) supports JPEG, PNG, TIFF and Webp images,
+through might support other image formats in the future.
 
 A list of things the hide isn't:
 
@@ -12,4 +14,4 @@ A list of things the hide isn't:
 
 If you need either of these things doing (which you ideally should -
 let's not have just one layer of security but many complimentary layers)
-then checkout encrypt.
+then checkout encrypt as it does both of those things.
