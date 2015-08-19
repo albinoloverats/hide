@@ -344,6 +344,7 @@ int main(int argc, char **argv)
 	cli_display(&ui);
 
 	pthread_join(*t, NULL);
+	free(t);
 
 	return errno;
 }

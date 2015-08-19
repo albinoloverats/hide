@@ -56,10 +56,12 @@ static int read_jpeg(image_info_t *image_info, void (*progress_update)(uint64_t,
 		return errno;
 
 	jpeg_message_t msg = { 0x00, NULL };
-	jpeg_image_t *image = calloc(sizeof (jpeg_image_t *), 1);
+	jpeg_image_t *image = calloc(sizeof (jpeg_image_t), 1);
 	jpeg_load_e action = *(bool *)image_info->extra ? JPEG_LOAD_READ : JPEG_LOAD_FIND;
 
-	jpeg_decode_data(fp, &msg, image, action);
+	if (!jpeg_decode_data(fp, &msg, image, action))
+		goto clean_up;
+
 	if (action == JPEG_LOAD_FIND)
 	{
 		msg.size = htonll(msg.size);
@@ -90,6 +92,7 @@ static int read_jpeg(image_info_t *image_info, void (*progress_update)(uint64_t,
 	/* store the image data where we can get it back later */
 	image_info->extra = image;
 
+clean_up:
 	fclose(fp);
 	return errno;
 }
@@ -117,6 +120,9 @@ static int write_jpeg(image_info_t image_info, void (*progress_update)(uint64_t,
 		if (progress_update)
 			progress_update(x, image_info.width);
 	}
+	free(image_info.buffer[0]);
+	free(image_info.buffer);
+
 	/* get actual message length from data */
 	memcpy(&msg.size, msg.data, sizeof msg.size);
 	msg.size = ntohll(msg.size);
@@ -124,7 +130,14 @@ static int write_jpeg(image_info_t image_info, void (*progress_update)(uint64_t,
 	/* write the message to the image */
 	jpeg_encode_data(fp, &msg, image);
 
+	free(msg.data);
+	for (uint64_t i = 0; i < image->height; i++)
+		free(image->rgb[i]);
+	free(image->rgb);
+	free(image);
+
 	fclose(fp);
+
 	return errno;
 }
 
@@ -138,11 +151,11 @@ static uint64_t info_jpeg(image_info_t *image_info)
 
 extern image_type_t *init(void)
 {
-	image_type_t *jpeg = malloc(sizeof (image_type_t));
-	jpeg->type = strdup("JPEG");
-	jpeg->is_type = is_jpeg;
-	jpeg->read = read_jpeg;
-	jpeg->write = write_jpeg;
-	jpeg->info =info_jpeg;
-	return jpeg;
+	static image_type_t jpeg;
+	jpeg.type = "JPEG";
+	jpeg.is_type = is_jpeg;
+	jpeg.read = read_jpeg;
+	jpeg.write = write_jpeg;
+	jpeg.info =info_jpeg;
+	return &jpeg;
 }

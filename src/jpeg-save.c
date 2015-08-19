@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
+#include <stdbool.h>
 
 #include "jpeg.h"
 
@@ -124,7 +125,9 @@ static SOSinfotype SOSinfo = { 0xFFDA, 12, 3, 1, 0, 2, 0x11, 3, 0x11, 0, 0x3F, 0
 
 typedef struct
 {
-	uint8_t R, G, B;
+	uint8_t R;
+	uint8_t G;
+	uint8_t B;
 } colorRGB;
 
 typedef struct
@@ -256,33 +259,42 @@ static int8_t bytepos = 7;      // bit position in the byte we write (bytenew)
 static uint16_t mask[16] = { 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768 };
 
 // The Huffman tables we'll use:
-static bitstring YDC_HT[12];
-static bitstring CbDC_HT[12];
-static bitstring YAC_HT[256];
-static bitstring CbAC_HT[256];
+static bitstring   YDC_HT[12]   = { 0x0 };
+static bitstring  CbDC_HT[12]   = { 0x0 };
+static bitstring  YAC_HT[256]   = { 0x0 };
+static bitstring CbAC_HT[256]   = { 0x0 };
 
-static uint8_t category_alloc[65535];
-static uint8_t *category;       // Here we'll keep the category of the numbers in range: -32767..32767
-static bitstring bitcode_alloc[65535];
-static bitstring *bitcode;      // their bitcoded representation
+static uint8_t    category_alloc[65535] = { 0x0 };
+static uint8_t   *category      = NULL;     // Here we'll keep the category of the numbers in range: -32767..32767
+static bitstring  bitcode_alloc[65535]  = { 0x0 };
+static bitstring *bitcode       = NULL;     // their bitcoded representation
 
 // Precalculated tables for a faster YCbCr->RGB transformation
 // We use a int32_t table because we'll scale values by 2^16 and work with integers
-static int32_t  YRtab[256],  YGtab[256],  YBtab[256];
-static int32_t CbRtab[256], CbGtab[256], CbBtab[256];
-static int32_t CrRtab[256], CrGtab[256], CrBtab[256];
-static float fdtbl_Y[64];
-static float fdtbl_Cb[64];      // the same with the fdtbl_Cr[64]
+static int32_t  YRtab[256]      = { 0x0 };
+static int32_t  YGtab[256]      = { 0x0 };
+static int32_t  YBtab[256]      = { 0x0 };
+static int32_t CbRtab[256]      = { 0x0 };
+static int32_t CbGtab[256]      = { 0x0 };
+static int32_t CbBtab[256]      = { 0x0 };
+static int32_t CrRtab[256]      = { 0x0 };
+static int32_t CrGtab[256]      = { 0x0 };
+static int32_t CrBtab[256]      = { 0x0 };
 
-static colorRGB *RGB_buffer;    // image to be encoded
-static uint32_t Ximage, Yimage; // image dimensions divisible by 8
-static int8_t YDU[64];          // This is the Data Unit of Y after YCbCr->RGB transformation
-static int8_t CbDU[64];
-static int8_t CrDU[64];
-static int16_t DU_DCT[64];      // Current DU (after DCT and quantization) which we'll zigzag
-static int16_t DU[64];          // zigzag reordered DU which will be Huffman coded
+static float  fdtbl_Y[64]       = { 0x0 };
+static float fdtbl_Cb[64]       = { 0x0 };  // the same with the fdtbl_Cr[64]
 
-static FILE *fp_jpeg_stream;
+static colorRGB *RGB_buffer     = NULL;     // image to be encoded
+static uint32_t Ximage;
+static uint32_t Yimage;                     // image dimensions divisible by 8
+
+static int8_t     YDU[64]       = { 0x0 };  // This is the Data Unit of Y after YCbCr->RGB transformation
+static int8_t    CbDU[64]       = { 0x0 };
+static int8_t    CrDU[64]       = { 0x0 };
+static int16_t DU_DCT[64]       = { 0x0 };  // Current DU (after DCT and quantization) which we'll zigzag
+static int16_t     DU[64]       = { 0x0 };  // zigzag reordered DU which will be Huffman coded
+
+static FILE *fp_jpeg_stream     = NULL;
 
 /**********************************************************************/
 
@@ -820,7 +832,7 @@ extern void jpeg_encode_data(FILE *file, jpeg_message_t *msg, jpeg_image_t *info
 	// The image we encode shall be filled with the last line and the last column
 	// from the original bitmap, until Ximage and Yimage are divisible by 8
 	// Load BMP image from disk and complete X
-	RGB_buffer = malloc(sizeof (colorRGB) * Xdiv8 * Ydiv8);
+	RGB_buffer = calloc(Xdiv8 * Ydiv8, sizeof (colorRGB));
 
 	//uint8_t nr_fillingbytes = (Ximage % 4) ? 4 - (Ximage % 4) : 0;
 	for (uint32_t nrline = 0; nrline < Yimage; nrline++)

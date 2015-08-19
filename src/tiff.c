@@ -112,11 +112,11 @@ static uint64_t info_tiff(image_info_t *image_info)
 
 extern image_type_t *init(void)
 {
-	image_type_t *tiff = malloc(sizeof (image_type_t));
-	tiff->type = strdup("TIFF");
-	tiff->is_type = is_tiff;
-	tiff->read = read_tiff;
-	tiff->write = write_tiff;
-	tiff->info = info_tiff;
-	return tiff;
+	static image_type_t tiff;
+	tiff.type = "TIFF";
+	tiff.is_type = is_tiff;
+	tiff.read = read_tiff;
+	tiff.write = write_tiff;
+	tiff.info = info_tiff;
+	return &tiff;
 }

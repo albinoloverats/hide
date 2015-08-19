@@ -115,6 +115,7 @@ static int write_webp(image_info_t image_info, void (*progress_update)(uint64_t,
 
 	fwrite(raw, 1, l, fp);
 	free(raw);
+	free(img);
 	fclose(fp);
 
 	return errno;
@@ -128,11 +129,11 @@ static uint64_t info_webp(image_info_t *image_info)
 
 extern image_type_t *init(void)
 {
-	image_type_t *webp = malloc(sizeof (image_type_t));
-	webp->type = strdup("WEBP");
-	webp->is_type = is_webp;
-	webp->read = read_webp;
-	webp->write = write_webp;
-	webp->info = info_webp;
-	return webp;
+	static image_type_t webp;
+	webp.type = "WEBP";
+	webp.is_type = is_webp;
+	webp.read = read_webp;
+	webp.write = write_webp;
+	webp.info = info_webp;
+	return &webp;
 }

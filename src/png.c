@@ -205,11 +205,11 @@ static uint64_t info_png(image_info_t *image_info)
 
 extern image_type_t *init(void)
 {
-	image_type_t *png = malloc(sizeof (image_type_t));
-	png->type = strdup("PNG");
-	png->is_type = is_png;
-	png->read = read_png;
-	png->write = write_png;
-	png->info = info_png;
-	return png;
+	static image_type_t png;
+	png.type = "PNG";
+	png.is_type = is_png;
+	png.read = read_png;
+	png.write = write_png;
+	png.info = info_png;
+	return &png;
 }
