@@ -22,6 +22,8 @@
 
 #include <inttypes.h>
 
+#define byte_limit(i) (i < 0 ? 0 : (i > 255 ? 255 : i))
+
 typedef enum
 {
 	JPEG_LOAD_READ,

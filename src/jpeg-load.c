@@ -116,19 +116,6 @@ typedef struct
 	uint8_t *m_colourspace;
 } stJpegData;
 
-
-// Clamp our integer between 0 and 255
-//static inline uint8_t Clamp(int i)
-//{
-//	if (i < 0)
-//		return 0;
-//	else if (i > 255)
-//		return 255;
-//	else
-//		return i;
-//}
-#define Clamp(i) (i < 0 ? 0 : (i > 255 ? 255 : i))
-
 /**********************************************************************/
 
 //static inline void GenHuffCodes(int num_codes, stBlock *arr, uint8_t *huffVal)
@@ -145,26 +132,33 @@ typedef struct
 
 /**********************************************************************/
 
-// float C(int u)
-//{
-//	return u == 0 ? 1.0 / sqrtf(2) : 1.0;
-//}
-#define C(u) (u == 0 ? 1.0 / sqrtf(2) : 1.0)
-
-static int func(int x, int y, const int block[8][8])
+static inline int innerIDCT(int x, int y, const int block[8][8])
 {
+	/*
+	 * TODO optimize this function - an order of magnitude more time
+	 * is spent in here (according to gprof)
+	 */
+#define PI_BY_16 M_PI / 16.0
+	/* these are not subsequently changed */
+	const int X = x * 2 + 1;
+	const int Y = y * 2 + 1;
+
 	float sum = 0;
 	for (int u = 0; u < 8; u++)
 		for (int v = 0; v < 8; v++)
-			sum += (C(u) * C(v)) * block[u][v] * cosf(((2 * x + 1) * u * M_PI) / 16) * cosf(((2 * y + 1) * v * M_PI) / 16);
-	return (int)((1.0 / 4.0) * sum);
+			sum += (u ? 1.0 : M_SQRT1_2)    \
+			     * (v ? 1.0 : M_SQRT1_2)    \
+			     *  block[u][v]             \
+			     *  cosf(X * u * PI_BY_16)  \
+			     *  cosf(Y * v * PI_BY_16);
+	return (int)(sum / 4);
 }
 
 static inline void PerformIDCT(int outBlock[8][8], const int inBlock[8][8])
 {
 	for (int y = 0; y < 8; y++)
 		for (int x = 0; x < 8; x++)
-			outBlock[x][y] = func(x, y, inBlock);
+			outBlock[x][y] = innerIDCT(x, y, inBlock);
 }
 
 /**********************************************************************/
@@ -268,7 +262,7 @@ eol:
 		for (int x = 0; x < 8; x++)
 		{
 			val[x][y] += 128;
-			outptr[x] = Clamp(val[x][y]);
+			outptr[x] = byte_limit(val[x][y]);
 		}
 		outptr += stride;
 	}
@@ -824,9 +818,9 @@ static void ConvertYCrCbtoRGB(int y, int cb, int cr, int *r, int *g, int *b)
 	float green = y - 0.34414f * (cr - 128) - 0.71414f * (cb - 128);
 	float blue = y + 1.772f * (cr - 128);
 
-	*r = Clamp((int)red);
-	*g = Clamp((int)green);
-	*b = Clamp((int)blue);
+	*r = byte_limit((int)red);
+	*g = byte_limit((int)green);
+	*b = byte_limit((int)blue);
 }
 
 /**********************************************************************/
@@ -874,9 +868,9 @@ static void YCrCB_to_RGB24_Block8x8(stJpegData *jdata, int w, int h, int imgx, i
 
 			ConvertYCrCbtoRGB(yc, cr, cb, &r, &g, &b);
 
-			pix[0] = Clamp(r);
-			pix[1] = Clamp(g);
-			pix[2] = Clamp(b);
+			pix[0] = byte_limit(r);
+			pix[1] = byte_limit(g);
+			pix[2] = byte_limit(b);
 		}
 	}
 }

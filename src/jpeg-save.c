@@ -346,19 +346,12 @@ static void write_DQTinfo(void)
 		writebyte(DQTinfo.Cbtable[i]);
 }
 
-static void set_quant_table(uint8_t *basic_table, uint8_t scale_factor, uint8_t *newtable)
 // Set quantization table and zigzag reorder it
-{
-	for (int i = 0; i < 64; i++)
-	{
-		int temp = (basic_table[i] * scale_factor + 50) / 100;
-		//limit the values to the valid range
-		if (temp <= 0L)
-			temp = 1;
-		if (temp > 255)
-			temp = 255; //limit to baseline range if requested
-		newtable[zigzag[i]] = (uint8_t)temp;
-	}
+//static inline void set_quant_table(uint8_t *basic_table, uint8_t scale_factor, uint8_t *newtable)
+#define set_quant_table(basic_table, scale_factor, newtable)            \
+{                                                                       \
+	for (int i = 0; i < 64; i++)                                    \
+		newtable[zigzag[i]] = byte_limit((basic_table[i] * scale_factor + 50) / 100);\
 }
 
 static void set_DQTinfo(void)
@@ -366,7 +359,7 @@ static void set_DQTinfo(void)
 	// scalefactor controls the visual quality of the image
 	// the smaller is, the better image we'll get, and the smaller
 	// compression we'll achieve
-	uint8_t scalefactor = 50;
+	uint8_t scalefactor = 1; /* this could be a parameter */
 	DQTinfo.marker = 0xFFDB;
 	DQTinfo.length = 132;
 	DQTinfo.QTYinfo = 0;
@@ -444,17 +437,6 @@ static void write_SOSinfo(void)
 	writebyte(SOSinfo.Bf);
 }
 
-/*
-static void write_comment(uint8_t *comment)
-{
-	writeword(0xFFFE);      //The COM marker
-	uint16_t length = (uint16_t)strlen((const char *)comment);
-	writeword(length + 2);
-	for (int i = 0; i < length; i++)
-		writebyte(comment[i]);
-}
-*/
-
 static void writebits(bitstring bs)
 {
 	// bit position in the bitstring we read, should be<=15 and >=0
@@ -481,19 +463,14 @@ static void writebits(bitstring bs)
 
 static void compute_Huffman_table(uint8_t *nrcodes, uint8_t *std_table, bitstring *HT)
 {
-	uint8_t pos_in_table = 0;
-	uint16_t codevalue = 0;
-	for (int i = 1; i <= 16; i++)
-	{
-		for (int j = 1; j <= nrcodes[i]; j++)
+	uint8_t p = 0;
+	uint16_t c = 0;
+	for (int i = 1; i <= 16; i++, c *= 2)
+		for (int j = 1; j <= nrcodes[i]; j++, p++, c++)
 		{
-			HT[std_table[pos_in_table]].value = codevalue;
-			HT[std_table[pos_in_table]].length = i;
-			pos_in_table++;
-			codevalue++;
+			HT[std_table[p]].value = c;
+			HT[std_table[p]].length = i;
 		}
-		codevalue *= 2;
-	}
 }
 
 static void init_Huffman_tables(void)

@@ -51,12 +51,19 @@
 	#define LIB_DIR "/usr/lib/"
 #else
 	#define LIB_DIR "./"
+
+	extern int read_jpeg(struct _image_info_t *, void (*progress_update)(uint64_t, uint64_t));
+	extern int write_jpeg(struct _image_info_t, void (*progress_update)(uint64_t, uint64_t));
+	extern uint64_t info_jpeg(struct _image_info_t *);
+	extern void free_jpeg(struct _image_info_t);
 #endif
 
 #undef HIDE_CAPACITY /* here image_info isn't a pointer but a local variable */
 #define HIDE_CAPACITY (image_info.width * image_info.height - sizeof (uint64_t))
 
+#ifndef __DEBUG__
 static cli_t ui;
+#endif
 
 static int process_file(data_info_t data_info, image_info_t image_info, void (*progress_update)(uint64_t, uint64_t))
 {
@@ -106,7 +113,8 @@ static int process_file(data_info_t data_info, image_info_t image_info, void (*p
 			if (y > 0 || x >= sizeof data_info.size)
 			{
 				i++;
-				progress_update(i, ntohll(data_info.size));
+				if (progress_update)
+					progress_update(i, ntohll(data_info.size));
 			}
 			if (map && i >= ntohll(data_info.size))
 				goto done;
@@ -207,6 +215,7 @@ static void *find_supported_formats(image_info_t *image_info)
 	return so;
 }
 
+#ifndef __DEBUG__
 static void progress_current_update(uint64_t i, uint64_t j)
 {
 	if (i < j && i > 0)
@@ -216,6 +225,9 @@ static void progress_current_update(uint64_t i, uint64_t j)
 	}
 	return;
 }
+#else
+	#define progress_current_update NULL
+#endif
 
 extern void *process(void *args)
 {
@@ -223,9 +235,15 @@ extern void *process(void *args)
 	image_info_t image_info = { files->image_in, NULL, NULL, NULL, NULL, 0, 0, 0, NULL, NULL };
 	data_info_t data_info = { files->file, 0, false };
 
+#ifndef __DEBUG__
 	void *so = find_supported_formats(&image_info);
 	if (!so)
 		pthread_exit(&errno);
+#else
+	image_info.read = read_jpeg;
+	image_info.write = write_jpeg;
+	image_info.free = free_jpeg;
+#endif
 
 	if (!(image_info.read && image_info.write))
 	{
@@ -242,9 +260,11 @@ extern void *process(void *args)
 	data_info.hide = (bool)files->image_out;
 	image_info.extra = &data_info.hide;
 
+#ifndef __DEBUG__
 	*ui.status = CLI_RUN;
 	ui.total->offset = 0;
 	ui.total->size = files->image_out ? 3 : 2;
+#endif
 
 	/*
 	 * read the source image
@@ -259,13 +279,17 @@ extern void *process(void *args)
 		/*
 		 * overlay the data on the image
 		 */
+#ifndef __DEBUG__
 		ui.total->offset++;
+#endif
 		if (process_file(data_info, image_info, progress_current_update))
 			die("Failed during data processing");
 		/*
 		 * write the image with the hidden data
 		 */
+#ifndef __DEBUG__
 		ui.total->offset++;
+#endif
 		image_info.file = files->image_out;
 		if (image_info.write(image_info, progress_current_update))
 			die("Failed to write output image");
@@ -275,19 +299,25 @@ extern void *process(void *args)
 		/*
 		 * extract the hidden data
 		 */
+#ifndef __DEBUG__
 		ui.total->offset++;
+#endif
 		if (process_file(data_info, image_info, progress_current_update))
 			die("Failed during data processing");
 		image_info.free(image_info);
 	}
 
+#ifndef __DEBUG__
 	ui.total->offset = ui.total->size;
 
 	dlclose(so);
+#endif
 
 	errno = EXIT_SUCCESS;
 done:
+#ifndef __DEBUG__
 	*ui.status = CLI_DONE;
+#endif
 	pthread_exit(&errno);
 }
 
@@ -302,6 +332,7 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
+#ifndef __DEBUG__
 	{
 		cli_status_e ui_status = CLI_INIT;
 		cli_progress_t ui_current = { 0, 1 }; /* updated after reading image */
@@ -310,14 +341,19 @@ int main(int argc, char **argv)
 		ui.current = &ui_current;
 		ui.total = &ui_total;
 	}
+#endif
 
 	if (argc == 2)
 	{
 		image_info_t image_info = { argv[1], NULL, NULL, NULL, NULL, 0, 0, 0, NULL, NULL };
+#ifndef __DEBUG__
 		void *so = find_supported_formats(&image_info);
 		if (!so)
 			return errno;
-		if (!(image_info.read && image_info.write))
+#else
+		image_info.info = info_jpeg;
+#endif
+		if (!image_info.info)
 		{
 			fprintf(stderr, "Unsupported image format\n");
 			find_supported_formats(NULL);
@@ -330,12 +366,13 @@ int main(int argc, char **argv)
 	}
 
 	hide_files_t files = { argv[1], argv[2], argv[3] };
+
+#ifndef __DEBUG__
 	/*
 	 * TODO start process() in own thread, then call cli_display()
 	 *
 	 * remember that process() will have to set the status once it's finished
 	 */
-
 	pthread_t *t = calloc(1, sizeof( pthread_t ));
 	pthread_attr_t a;
 	pthread_attr_init(&a);
@@ -347,6 +384,9 @@ int main(int argc, char **argv)
 
 	pthread_join(*t, NULL);
 	free(t);
+#else
+	process(&files);
+#endif
 
 	return errno;
 }
