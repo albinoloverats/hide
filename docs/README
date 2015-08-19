@@ -1,6 +1,9 @@
 hide
 ====
 
+About
+-----
+
 Warning: hide is currently in the beta stages of development!
 
 hide is a steganographic tool for hiding data in, and retrieving data
@@ -16,3 +19,17 @@ A list of things the hide isn't:
 If you need either of these things doing (which you really should -
 don't use just one layer of security but many complimentary layers)
 then checkout encrypt as it does both of those things.
+
+Usage
+-----
+
+There are three possible usages of hide:
+
+    hide <image> <document> <output>
+    hide <image> <output>
+    hide <image>
+
+The first will hide the document in the first image and produce an
+output image which contains the hidden data. The second will retrieve,
+and place into the output file, a previously hidden file. And finally,
+the third will show the images capacity for hiding a file.
