@@ -347,11 +347,10 @@ static void write_DQTinfo(void)
 }
 
 // Set quantization table and zigzag reorder it
-//static inline void set_quant_table(uint8_t *basic_table, uint8_t scale_factor, uint8_t *newtable)
 #define set_quant_table(basic_table, scale_factor, newtable)            \
 {                                                                       \
 	for (int i = 0; i < 64; i++)                                    \
-		newtable[zigzag[i]] = byte_limit((basic_table[i] * scale_factor + 50) / 100);\
+		newtable[zigzag[i]] = byte_limit((basic_table[i] * scale_factor + 50) / 100, 1);\
 }
 
 static void set_DQTinfo(void)

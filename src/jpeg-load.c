@@ -262,7 +262,7 @@ eol:
 		for (int x = 0; x < 8; x++)
 		{
 			val[x][y] += 128;
-			outptr[x] = byte_limit(val[x][y]);
+			outptr[x] = byte_limit(val[x][y], 0);
 		}
 		outptr += stride;
 	}
@@ -365,10 +365,12 @@ static int ParseDQT(stJpegData *jdata, const uint8_t *stream)
 			// precision in this case is either 0 or 1 and indicates the precision
 			// of the quantized values;
 			// 8-bit (baseline) for 0 and  up to 16-bit for 1
+			fprintf(stderr, "Fail @ %s:%d\n", __FILE__, __LINE__);
 			exit(-1);
 		}
 		if (qindex >= 4)
 		{
+			fprintf(stderr, "Fail @ %s:%d\n", __FILE__, __LINE__);
 			exit(-1);
 		}
 
@@ -405,6 +407,7 @@ static int ParseSOS(stJpegData *jdata, const uint8_t *stream)
 
 	if (nr_components != 3)
 	{
+		fprintf(stderr, "Fail @ %s:%d\n", __FILE__, __LINE__);
 		exit(-1);
 	}
 
@@ -416,10 +419,12 @@ static int ParseSOS(stJpegData *jdata, const uint8_t *stream)
 
 		if ((table & 0xf) >= 4)
 		{
+			fprintf(stderr, "Fail @ %s:%d\n", __FILE__, __LINE__);
 			exit(-1);
 		}
 		if ((table >> 4) >= 4)
 		{
+			fprintf(stderr, "Fail @ %s:%d\n", __FILE__, __LINE__);
 			exit(-1);
 		}
 
@@ -464,10 +469,12 @@ static int ParseDHT(stJpegData *jdata, const uint8_t *stream)
 		}
 		if (count > 256)
 		{
+			fprintf(stderr, "Fail @ %s:%d\n", __FILE__, __LINE__);
 			exit(-1);
 		}
 		if ((index & 0xf) >= HUFFMAN_TABLES)
 		{
+			fprintf(stderr, "Fail @ %s:%d\n", __FILE__, __LINE__);
 			exit(-1);
 		}
 		if (index & 0xf0)
@@ -562,12 +569,14 @@ static int ParseJFIF(stJpegData *jdata, const uint8_t *stream)
 
 	if (!dht_marker_found)
 	{
+		fprintf(stderr, "Fail @ %s:%d\n", __FILE__, __LINE__);
 		exit(-1);
 	}
 
 	return 0;
 
 bogus_jpeg_format:
+	fprintf(stderr, "Fail @ %s:%d\n", __FILE__, __LINE__);
 	exit(-1);
 	return -1;
 }
@@ -578,7 +587,10 @@ static int JpegParseHeader(stJpegData *jdata, const uint8_t *buf)
 {
 	// Identify the file
 	if ((buf[0] != 0xFF) || (buf[1] != SOI))
+	{
+		fprintf(stderr, "Fail @ %s:%d\n", __FILE__, __LINE__);
 		exit(-1);
+	}
 	const uint8_t *startStream = buf + 2;
 	return ParseJFIF(jdata, startStream);
 }
@@ -736,6 +748,7 @@ static void ProcessHuffmanDataUnit(stJpegData *jdata, int indx)
 
 	if (!found)
 	{
+		fprintf(stderr, "Fail @ %s:%d\n", __FILE__, __LINE__);
 		exit(-1);
 	}
 
@@ -760,7 +773,6 @@ static void ProcessHuffmanDataUnit(stJpegData *jdata, int indx)
 			// Check if its one of our huffman codes
 			if (IsInHuffmanCodes(code, k, c->m_acTable->m_numBlocks, c->m_acTable->m_blocks, &decodedValue))
 			{
-
 				// Skip over k bits, since we found the huffman value
 				SkipNBits(&jdata->m_stream, k);
 
@@ -783,6 +795,8 @@ static void ProcessHuffmanDataUnit(stJpegData *jdata, int indx)
 					nr += count_0; //skip count_0 zeroes
 					if (nr > 63)
 					{
+						/* FIXME why does this happen? huffman decode error */
+						fprintf(stderr, "Fail @ %s:%d\n", __FILE__, __LINE__);
 						exit(-1);
 					}
 
@@ -818,9 +832,9 @@ static void ConvertYCrCbtoRGB(int y, int cb, int cr, int *r, int *g, int *b)
 	float green = y - 0.34414f * (cr - 128) - 0.71414f * (cb - 128);
 	float blue = y + 1.772f * (cr - 128);
 
-	*r = byte_limit((int)red);
-	*g = byte_limit((int)green);
-	*b = byte_limit((int)blue);
+	*r = byte_limit((int)red, 0);
+	*g = byte_limit((int)green, 0);
+	*b = byte_limit((int)blue, 0);
 }
 
 /**********************************************************************/
@@ -868,9 +882,9 @@ static void YCrCB_to_RGB24_Block8x8(stJpegData *jdata, int w, int h, int imgx, i
 
 			ConvertYCrCbtoRGB(yc, cr, cb, &r, &g, &b);
 
-			pix[0] = byte_limit(r);
-			pix[1] = byte_limit(g);
-			pix[2] = byte_limit(b);
+			pix[0] = byte_limit(r, 0);
+			pix[1] = byte_limit(g, 0);
+			pix[2] = byte_limit(b, 0);
 		}
 	}
 }
@@ -923,7 +937,7 @@ static int JpegDecode(stJpegData *jdata)
 		int w = jdata->m_width * 3;
 		int height = h + (8 * hFactor) - (h % (8 * hFactor));
 		int width = w + (8 * vFactor) - (w % (8 * vFactor));
-		jdata->m_rgb = calloc(width * height + 100, 1); // 100 is a safetly
+		jdata->m_rgb = calloc(width * height, sizeof (uint8_t));
 	}
 
 	jdata->m_component_info[0].m_previousDC = 0;

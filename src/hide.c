@@ -310,6 +310,8 @@ done:
 
 int main(int argc, char **argv)
 {
+	setlocale(LC_NUMERIC, "");
+
 	if (argc < 2 || argc > 4)
 	{
 		fprintf(stderr, "Usage: %s <source image> <file to hide> <output image>\n", argv[0]);
@@ -341,11 +343,15 @@ int main(int argc, char **argv)
 			fprintf(stderr, "Unsupported image format\n");
 			find_supported_formats(NULL);
 			errno = EFTYPE;
-			return errno;
 		}
-		setlocale(LC_NUMERIC, "");
-		printf("File capacity: %'" PRIu64 " bytes\n", image_info.info(&image_info));
-		return EXIT_SUCCESS;
+		else
+		{
+			printf("File capacity: %'" PRIu64 " bytes\n", image_info.info(&image_info));
+			image_info.free(image_info);
+			errno = EXIT_SUCCESS;
+		}
+		dlclose(so);
+		return errno;
 	}
 
 	hide_files_t files = { argv[1], argv[2], argv[3] };

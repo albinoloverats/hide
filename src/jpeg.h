@@ -22,7 +22,7 @@
 
 #include <inttypes.h>
 
-#define byte_limit(i) (i < 0 ? 0 : (i > 255 ? 255 : i))
+#define byte_limit(i, j) (i < j ? j : (i > 255 ? 255 : i))
 
 typedef enum
 {
