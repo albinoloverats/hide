@@ -110,6 +110,13 @@ static uint64_t info_tiff(image_info_t *image_info)
 	return HIDE_CAPACITY;
 }
 
+static void free_tiff(image_info_t image_info)
+{
+	for (uint64_t y = 0; y < image_info.height; y++)
+		free(image_info.buffer[y]);
+	free(image_info.buffer);
+}
+
 extern image_type_t *init(void)
 {
 	static image_type_t tiff;
@@ -118,5 +125,6 @@ extern image_type_t *init(void)
 	tiff.read = read_tiff;
 	tiff.write = write_tiff;
 	tiff.info = info_tiff;
+	tiff.free = free_tiff;
 	return &tiff;
 }

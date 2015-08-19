@@ -78,6 +78,7 @@ static int read_jpeg(image_info_t *image_info, void (*progress_update)(uint64_t,
 	image_info->buffer[0] = malloc(image_info->width * image_info->bpp);
 	/* (if necessary) copy message.data into image_info->buffer */
 	if (msg.data)
+	{
 		for (uint64_t x = 0, i = 0; i < msg.size; x += image_info->bpp, i++)
 		{
 			image_info->buffer[0][x + 0] = (msg.data[i] & 0xE0) >> 5;
@@ -86,6 +87,8 @@ static int read_jpeg(image_info_t *image_info, void (*progress_update)(uint64_t,
 			if (progress_update)
 				progress_update(x, image_info->width);
 		}
+		free(msg.data);
+	}
 	else if (progress_update)
 		progress_update(image_info->width, image_info->width);
 
@@ -149,6 +152,17 @@ static uint64_t info_jpeg(image_info_t *image_info)
 	return HIDE_CAPACITY;
 }
 
+static void free_jpeg(image_info_t image_info)
+{
+	free(image_info.buffer[0]);
+	free(image_info.buffer);
+	jpeg_image_t *image = image_info.extra;
+	for (uint64_t i = 0; i < image->height; i++)
+		free(image->rgb[i]);
+	free(image->rgb);
+	free(image);
+}
+
 extern image_type_t *init(void)
 {
 	static image_type_t jpeg;
@@ -156,6 +170,7 @@ extern image_type_t *init(void)
 	jpeg.is_type = is_jpeg;
 	jpeg.read = read_jpeg;
 	jpeg.write = write_jpeg;
-	jpeg.info =info_jpeg;
+	jpeg.info = info_jpeg;
+	jpeg.free = free_jpeg;
 	return &jpeg;
 }

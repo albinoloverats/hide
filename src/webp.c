@@ -127,6 +127,13 @@ static uint64_t info_webp(image_info_t *image_info)
 	return HIDE_CAPACITY;
 }
 
+static void free_webp(image_info_t image_info)
+{
+	for (uint64_t y = 0; y < image_info.height; y++)
+		free(image_info.buffer[y]);
+	free(image_info.buffer);
+}
+
 extern image_type_t *init(void)
 {
 	static image_type_t webp;
@@ -135,5 +142,6 @@ extern image_type_t *init(void)
 	webp.read = read_webp;
 	webp.write = write_webp;
 	webp.info = info_webp;
+	webp.free = free_webp;
 	return &webp;
 }

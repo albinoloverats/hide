@@ -116,39 +116,40 @@ typedef struct
 	uint8_t *m_colourspace;
 } stJpegData;
 
+
 // Clamp our integer between 0 and 255
-static uint8_t Clamp(int i)
-{
-	if (i < 0)
-		return 0;
-	else if (i > 255)
-		return 255;
-	else
-		return i;
+//static inline uint8_t Clamp(int i)
+//{
+//	if (i < 0)
+//		return 0;
+//	else if (i > 255)
+//		return 255;
+//	else
+//		return i;
+//}
+#define Clamp(i) (i < 0 ? 0 : (i > 255 ? 255 : i))
+
+/**********************************************************************/
+
+//static inline void GenHuffCodes(int num_codes, stBlock *arr, uint8_t *huffVal)
+#define GenHuffCodes(num_codes, arr, huffVal)                           \
+{                                                                       \
+	for (int cc = 0, hc = 0, lc = 1; cc < num_codes; cc++, hc++)    \
+	{                                                               \
+		for (; arr[cc].length > lc; lc++)                       \
+			hc = hc << 1;                                   \
+		arr[cc].code = hc;                                      \
+		arr[cc].value = huffVal[cc];                            \
+	}                                                               \
 }
 
 /**********************************************************************/
 
-static void GenHuffCodes(int num_codes, stBlock *arr, uint8_t *huffVal)
-{
-	int hufcounter = 0;
-	int codelengthcounter = 1;
-	for (int cc = 0; cc < num_codes; cc++)
-	{
-		for (; arr[cc].length > codelengthcounter; codelengthcounter++)
-			hufcounter = hufcounter << 1;
-		arr[cc].code = hufcounter;
-		arr[cc].value = huffVal[cc];
-		hufcounter = hufcounter + 1;
-	}
-}
-
-/**********************************************************************/
-
-static float C(int u)
-{
-	return u == 0 ? 1.0 / sqrtf(2) : 1.0;
-}
+// float C(int u)
+//{
+//	return u == 0 ? 1.0 / sqrtf(2) : 1.0;
+//}
+#define C(u) (u == 0 ? 1.0 / sqrtf(2) : 1.0)
 
 static int func(int x, int y, const int block[8][8])
 {
@@ -159,7 +160,7 @@ static int func(int x, int y, const int block[8][8])
 	return (int)((1.0 / 4.0) * sum);
 }
 
-static void PerformIDCT(int outBlock[8][8], const int inBlock[8][8])
+static inline void PerformIDCT(int outBlock[8][8], const int inBlock[8][8])
 {
 	for (int y = 0; y < 8; y++)
 		for (int x = 0; x < 8; x++)
@@ -168,7 +169,7 @@ static void PerformIDCT(int outBlock[8][8], const int inBlock[8][8])
 
 /**********************************************************************/
 
-static void DequantizeBlock(int block[64], const float quantBlock[64])
+static inline void DequantizeBlock(int block[64], const float quantBlock[64])
 {
 	for (int c = 0; c < 64; c++)
 		block[c] = (int)(block[c] * quantBlock[c]);
@@ -176,7 +177,7 @@ static void DequantizeBlock(int block[64], const float quantBlock[64])
 
 /**********************************************************************/
 
-static void DeZigZag(int outBlock[64], const int inBlock[64])
+static inline void DeZigZag(int outBlock[64], const int inBlock[64])
 {
 	for (int i = 0; i < 64; i++)
 		outBlock[i] = inBlock[ZigZagArray[i]];
@@ -184,7 +185,7 @@ static void DeZigZag(int outBlock[64], const int inBlock[64])
 
 /**********************************************************************/
 
-static void TransformArray(int outArray[8][8], const int inArray[64])
+static inline void TransformArray(int outArray[8][8], const int inArray[64])
 {
 	for (int y = 0, cc = 0; y < 8; y++)
 		for (int x = 0; x < 8; x++, cc++)
@@ -208,17 +209,18 @@ static void DecodeSingleBlock(stComponent *comp, uint8_t *outputBuf, int stride)
 
 	static uint64_t offset = 0;
 	static uint8_t bit = 1;
+	static bool aloc = false;
 
-	for (int i = 0; i < 64; i++)
+	for (int i = 0; i < 64 && !aloc && offset < message->size + sizeof message->size; i++)
 		if (data[i] > 1)
 		{
 			switch (action)
 			{
 				case JPEG_LOAD_FIND:
 				{
-					if (message->data && offset > message->size + sizeof message->size)
+					if (aloc && offset > message->size + sizeof message->size)
 						goto eol;
-					uint8_t *ptr = (message->data ? message->data : (uint8_t *)&message->size) + offset;
+					uint8_t *ptr = (aloc ? message->data : (uint8_t *)&message->size) + offset;
 					if (data[i] & 0x01)
 						*ptr |= (0xFF & bit);
 					bit <<= 1;
@@ -227,10 +229,11 @@ static void DecodeSingleBlock(stComponent *comp, uint8_t *outputBuf, int stride)
 						bit = 1;
 						offset++;
 					}
-					if (offset >= sizeof message->size && !message->data)
+					if (offset >= sizeof message->size && !aloc)
 					{
 						message->size = ntohll(message->size);
-						message->data = calloc(message->size + sizeof message->size, 1);
+						message->data = calloc(message->size + sizeof message->size, sizeof (uint8_t));
+						aloc = true;
 					}
 					break;
 				}
@@ -339,7 +342,7 @@ static int ParseSOF(stJpegData *jdata, const uint8_t *stream)
 
 /**********************************************************************/
 
-static void BuildQuantizationTable(float *qtable, const uint8_t *ref_table)
+static inline void BuildQuantizationTable(float *qtable, const uint8_t *ref_table)
 {
 	for (int i = 0, c = 0; i < 8; i++)
 		for (int j = 0; j < 8; j++, c++)
@@ -370,7 +373,6 @@ static int ParseDQT(stJpegData *jdata, const uint8_t *stream)
 			// 8-bit (baseline) for 0 and  up to 16-bit for 1
 			exit(-1);
 		}
-
 		if (qindex >= 4)
 		{
 			exit(-1);
@@ -458,7 +460,6 @@ static int ParseDHT(stJpegData *jdata, const uint8_t *stream)
 	while (length > 0)
 	{
 		index = *stream++;
-
 		// We need to calculate the number of bytes 'vals' will takes
 		huff_bits[0] = 0;
 		count = 0;
@@ -467,7 +468,6 @@ static int ParseDHT(stJpegData *jdata, const uint8_t *stream)
 			huff_bits[i] = *stream++;
 			count += huff_bits[i];
 		}
-
 		if (count > 256)
 		{
 			exit(-1);
@@ -476,13 +476,11 @@ static int ParseDHT(stJpegData *jdata, const uint8_t *stream)
 		{
 			exit(-1);
 		}
-
 		if (index & 0xf0)
 		{
 			uint8_t *huffval = jdata->m_HTAC[index & 0xf].m_hufVal;
 			for (i = 0; i < count; i++)
 				huffval[i] = *stream++;
-
 			BuildHuffmanTable(huff_bits, &jdata->m_HTAC[index & 0xf]); // AC
 		}
 		else
@@ -490,10 +488,8 @@ static int ParseDHT(stJpegData *jdata, const uint8_t *stream)
 			uint8_t *huffval = jdata->m_HTDC[index & 0xf].m_hufVal;
 			for (i = 0; i < count; i++)
 				huffval[i] = *stream++;
-
 			BuildHuffmanTable(huff_bits, &jdata->m_HTDC[index & 0xf]); // DC
 		}
-
 		length -= 1;
 		length -= 16;
 		length -= count;
@@ -598,60 +594,46 @@ static int JpegParseHeader(stJpegData *jdata, const uint8_t *buf)
 static uint32_t g_reservoir = 0;
 static uint32_t g_nbits_in_reservoir = 0;
 
-static void FillNBits(const uint8_t **stream, int nbits_wanted)
-{
-	while ((int)g_nbits_in_reservoir < nbits_wanted)
-	{
-		/*const */ uint8_t c = *(*stream)++;
-		g_reservoir <<= 8;
-		//if (c == 0xff && (**stream) != 0x00)
-		//{
-		//      //exit(-1);
-		//      *(*stream)++;
-		//      *(*stream)++;
-		//      c = *(*stream)++;
-
-		//      g_reservoir = 0;
-		//      g_nbits_in_reservoir = 0;
-		//}
-
-		if (c == 0xff && (**stream) == 0x00)
-			(*stream)++;
-		g_reservoir |= c;
-		g_nbits_in_reservoir += 8;
-	}
+//static inline void FillNBits(const uint8_t **stream, int nbits_wanted)
+#define FillNBits(stream, nbits_wanted)                                 \
+{                                                                       \
+	while (g_nbits_in_reservoir < (unsigned)nbits_wanted)           \
+	{                                                               \
+		uint8_t c = *(*stream)++;                               \
+		g_reservoir <<= 8;                                      \
+		if (c == 0xff && **stream == 0x00)                      \
+			(*stream)++;                                    \
+		g_reservoir |= c;                                       \
+		g_nbits_in_reservoir += 8;                              \
+	}                                                               \
 }
 
-static int16_t GetNBits(const uint8_t **stream, int nbits_wanted)
+//static inline void shift_bits(int nbits_wanted)
+#define shift_bits(nbits_wanted)                                        \
+{                                                                       \
+	g_nbits_in_reservoir -= nbits_wanted;                           \
+	g_reservoir &= (1U << g_nbits_in_reservoir) - 1;                \
+}
+
+static inline int16_t GetNBits(const uint8_t **stream, int nbits_wanted)
 {
 	FillNBits(stream, nbits_wanted);
-
-	int16_t result = ((g_reservoir) >> (g_nbits_in_reservoir - (nbits_wanted)));
-
-	g_nbits_in_reservoir -= (nbits_wanted);
-	g_reservoir &= ((1U << g_nbits_in_reservoir) - 1);
-
-	/*
-	 * // Could do the sign conversion here!
-	 * if (result < (int16_t)(1UL<<((nbits_wanted)-1)))
-	 * {
-	 * result = result + (int16_t)(0xFFFFFFFFUL<<(nbits_wanted))+1;
-	 * }
-	 */
+	int16_t result = g_reservoir >> (g_nbits_in_reservoir - (nbits_wanted));
+	shift_bits(nbits_wanted);
 	return result;
 }
 
-static int LookNBits(const uint8_t **stream, int nbits_wanted)
+static inline int LookNBits(const uint8_t **stream, int nbits_wanted)
 {
 	FillNBits(stream, nbits_wanted);
-	return ((g_reservoir) >> (g_nbits_in_reservoir - (nbits_wanted)));
+	return g_reservoir >> (g_nbits_in_reservoir - (nbits_wanted));
 }
 
-static void SkipNBits(const uint8_t **stream, int nbits_wanted)
-{
-	FillNBits(stream, nbits_wanted);
-	g_nbits_in_reservoir -= (nbits_wanted);
-	g_reservoir &= ((1U << g_nbits_in_reservoir) - 1);
+//static inline void SkipNBits(const uint8_t **stream, int nbits_wanted)
+#define SkipNBits(stream, nbits_wanted)                                 \
+{                                                                       \
+	FillNBits(stream, nbits_wanted);                                \
+	shift_bits(nbits_wanted);                                       \
 }
 
 /**********************************************************************/
@@ -675,17 +657,16 @@ static bool IsInHuffmanCodes(int code, int numCodeBits, int numBlocks, stBlock *
 
 /**********************************************************************/
 
-static int DetermineSign(int val, int nBits)
-{
-	bool negative = val < (1 << (nBits - 1));
-
-	if (negative)
-		// (-1 << (s)), makes the last bit a 1, so we have 1000,0000 for example for 8 bits
-		val = val + (-1 << (nBits)) + 1;
-
-	// Else its unsigned, just return
-	return val;
-}
+//static inline int DetermineSign(int val, int nBits)
+//{
+//	bool negative = val < (1 << (nBits - 1));
+//	if (negative)
+//		// (-1 << (s)), makes the last bit a 1, so we have 1000,0000 for example for 8 bits
+//		val = val + (-1 << (nBits)) + 1;
+//	// Else its unsigned, just return
+//	return val;
+//}
+#define DetermineSign(val, nBits) ((val < (1 << (nBits - 1))) ? val + (-1 << nBits) + 1 : val)
 
 /**********************************************************************/
 
@@ -820,7 +801,6 @@ static void ProcessHuffmanDataUnit(stJpegData *jdata, int indx)
 
 					int16_t data = GetNBits(&jdata->m_stream, size_val);
 					data = DetermineSign(data, size_val);
-
 					DCT_tcoeff[nr++] = data;
 				}
 				break;
@@ -840,29 +820,26 @@ static void ProcessHuffmanDataUnit(stJpegData *jdata, int indx)
 
 static void ConvertYCrCbtoRGB(int y, int cb, int cr, int *r, int *g, int *b)
 {
-	float red, green, blue;
+	float red = y + 1.402f * (cb - 128);
+	float green = y - 0.34414f * (cr - 128) - 0.71414f * (cb - 128);
+	float blue = y + 1.772f * (cr - 128);
 
-	red = y + 1.402f * (cb - 128);
-	green = y - 0.34414f * (cr - 128) - 0.71414f * (cb - 128);
-	blue = y + 1.772f * (cr - 128);
-
-	*r = (int)Clamp((int)red);
-	*g = (int)Clamp((int)green);
-	*b = (int)Clamp((int)blue);
+	*r = Clamp((int)red);
+	*g = Clamp((int)green);
+	*b = Clamp((int)blue);
 }
 
 /**********************************************************************/
 
 static void YCrCB_to_RGB24_Block8x8(stJpegData *jdata, int w, int h, int imgx, int imgy, int imgw, int imgh)
 {
-	const uint8_t *Y, *Cb, *Cr;
 	uint8_t *pix;
 
 	int r, g, b;
 
-	Y = jdata->m_Y;
-	Cb = jdata->m_Cb;
-	Cr = jdata->m_Cr;
+	const uint8_t *Y = jdata->m_Y;
+	const uint8_t *Cb = jdata->m_Cb;
+	const uint8_t *Cr = jdata->m_Cr;
 
 	int olw = 0; // overlap
 //      if ( imgx > abs(imgw-8*w) )

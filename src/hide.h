@@ -36,6 +36,7 @@ typedef struct _image_info_t
 	int (*read)(struct _image_info_t *, void (*progress_update)(uint64_t, uint64_t));
 	int (*write)(struct _image_info_t, void (*progress_update)(uint64_t, uint64_t));
 	uint64_t (*info)(struct _image_info_t *);
+	void (*free)(struct _image_info_t);
 	uint64_t height;
 	uint64_t width;
 	uint16_t bpp;
@@ -59,6 +60,7 @@ typedef struct
 	int (*read)(image_info_t *, void (*progress_update)(uint64_t, uint64_t));
 	int (*write)(image_info_t, void (*progress_update)(uint64_t, uint64_t));
 	uint64_t (*info)(image_info_t *);
+	void (*free)(image_info_t);
 }
 image_type_t;
 

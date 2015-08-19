@@ -203,6 +203,14 @@ static uint64_t info_png(image_info_t *image_info)
 	return HIDE_CAPACITY;
 }
 
+static void free_png(image_info_t image_info)
+{
+	for (uint64_t y = 0; y < image_info.height; y++)
+		free(image_info.buffer[y]);
+	free(image_info.buffer);
+	free(image_info.extra);
+}
+
 extern image_type_t *init(void)
 {
 	static image_type_t png;
@@ -211,5 +219,6 @@ extern image_type_t *init(void)
 	png.read = read_png;
 	png.write = write_png;
 	png.info = info_png;
+	png.free = free_png;
 	return &png;
 }

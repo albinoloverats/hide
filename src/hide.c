@@ -192,6 +192,7 @@ static void *find_supported_formats(image_info_t *image_info)
 			image_info->read = format->read;
 			image_info->write = format->write;
 			image_info->info = format->info;
+			image_info->free = format->free;
 			break;
 		}
 		dlclose(so);
@@ -219,7 +220,7 @@ static void progress_current_update(uint64_t i, uint64_t j)
 extern void *process(void *args)
 {
 	hide_files_t *files = args;
-	image_info_t image_info = { files->image_in, NULL, NULL, NULL, 0, 0, 0, NULL, NULL };
+	image_info_t image_info = { files->image_in, NULL, NULL, NULL, NULL, 0, 0, 0, NULL, NULL };
 	data_info_t data_info = { files->file, 0, false };
 
 	void *so = find_supported_formats(&image_info);
@@ -277,6 +278,7 @@ extern void *process(void *args)
 		ui.total->offset++;
 		if (process_file(data_info, image_info, progress_current_update))
 			die("Failed during data processing");
+		image_info.free(image_info);
 	}
 
 	ui.total->offset = ui.total->size;
@@ -311,7 +313,7 @@ int main(int argc, char **argv)
 
 	if (argc == 2)
 	{
-		image_info_t image_info = { argv[1], NULL, NULL, NULL, 0, 0, 0, NULL, NULL };
+		image_info_t image_info = { argv[1], NULL, NULL, NULL, NULL, 0, 0, 0, NULL, NULL };
 		void *so = find_supported_formats(&image_info);
 		if (!so)
 			return errno;
