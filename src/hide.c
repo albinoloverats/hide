@@ -51,11 +51,6 @@
 	#define LIB_DIR "/usr/lib/"
 #else
 	#define LIB_DIR "./"
-
-	extern int read_jpeg(struct _image_info_t *, void (*progress_update)(uint64_t, uint64_t));
-	extern int write_jpeg(struct _image_info_t, void (*progress_update)(uint64_t, uint64_t));
-	extern uint64_t info_jpeg(struct _image_info_t *);
-	extern void free_jpeg(struct _image_info_t);
 #endif
 
 #undef HIDE_CAPACITY /* here image_info isn't a pointer but a local variable */
@@ -235,15 +230,9 @@ extern void *process(void *args)
 	image_info_t image_info = { files->image_in, NULL, NULL, NULL, NULL, 0, 0, 0, NULL, NULL };
 	data_info_t data_info = { files->file, 0, false };
 
-#ifndef __DEBUG__
 	void *so = find_supported_formats(&image_info);
 	if (!so)
 		pthread_exit(&errno);
-#else
-	image_info.read = read_jpeg;
-	image_info.write = write_jpeg;
-	image_info.free = free_jpeg;
-#endif
 
 	if (!(image_info.read && image_info.write))
 	{
@@ -309,10 +298,8 @@ extern void *process(void *args)
 
 #ifndef __DEBUG__
 	ui.total->offset = ui.total->size;
-
-	dlclose(so);
 #endif
-
+	dlclose(so);
 	errno = EXIT_SUCCESS;
 done:
 #ifndef __DEBUG__
@@ -346,13 +333,9 @@ int main(int argc, char **argv)
 	if (argc == 2)
 	{
 		image_info_t image_info = { argv[1], NULL, NULL, NULL, NULL, 0, 0, 0, NULL, NULL };
-#ifndef __DEBUG__
 		void *so = find_supported_formats(&image_info);
 		if (!so)
 			return errno;
-#else
-		image_info.info = info_jpeg;
-#endif
 		if (!image_info.info)
 		{
 			fprintf(stderr, "Unsupported image format\n");

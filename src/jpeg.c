@@ -34,10 +34,6 @@
 
 static const char jpeg_header[] = { 0xFF, 0xD8, 0xFF };
 
-#ifdef __DEBUG__
-#define static extern
-#endif
-
 static bool is_jpeg(char *file_name)
 {
 	FILE *fp = fopen(file_name, "rb");
@@ -166,10 +162,6 @@ static void free_jpeg(image_info_t image_info)
 	free(image->rgb);
 	free(image);
 }
-
-#ifdef __DEBUG__
-#undef static
-#endif
 
 extern image_type_t *init(void)
 {

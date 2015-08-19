@@ -8,7 +8,8 @@ CPPFLAGS = -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64
 LIBS     = -ldl -lpthread
 SHARED   = -fPIC -shared -Wl,-soname,
 
-DEBUG    = -D__DEBUG__ -O0 -g3 -ggdb -pg -lc
+DEBUG    = -D__DEBUG__ -O0 -g3 -ggdb
+#-pg -lc
 
 all: hide jpeg png tiff webp
 
@@ -39,7 +40,7 @@ webp:
 debug: debug-hide debug-jpeg debug-png debug-tiff debug-webp
 
 debug-hide:
-	 @$(CC) $(CFLAGS) $(CPPFLAGS) $(LIBS) $(SOURCE) src/jpeg.c src/jpeg-load.c src/jpeg-save.c -lm $(DEBUG) -o hide
+	 @$(CC) $(CFLAGS) $(CPPFLAGS) $(LIBS) $(SOURCE) $(DEBUG) -o hide
 	-@echo "built ‘$(SOURCE)’ → ‘hide’"
 
 #debug-hide-gui:
