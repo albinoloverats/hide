@@ -33,3 +33,11 @@ The first will hide the document in the first image and produce an
 output image which contains the hidden data. The second will retrieve,
 and place into the output file, a previously hidden file. And finally,
 the third will show the images capacity for hiding a file.
+
+Known Issues
+------------
+
+* Debian/Slackware
+  - WebP library doesn't compile
+    - Missing definition for lossless image encoding (Debian)
+    - Missing entire header for encoding (Slackware)
