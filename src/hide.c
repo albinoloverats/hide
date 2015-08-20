@@ -323,9 +323,16 @@ int main(int argc, char **argv)
 	else if (argc == 2)
 	{
 		image_info_t image_info = { argv[1], NULL, NULL, NULL, NULL, 0, 0, 0, NULL, NULL };
+#ifndef __DEBUG_JPEG__
 		void *so = find_supported_formats(&image_info);
 		if (!so)
 			return errno;
+#else
+		extern uint64_t info_jpeg(image_info_t *image_info);
+		extern void free_jpeg(image_info_t image_info);
+		image_info.info = info_jpeg;
+		image_info.free = free_jpeg;
+#endif
 		if (!image_info.info)
 		{
 			fprintf(stderr, "Unsupported image format\n");
@@ -339,7 +346,9 @@ int main(int argc, char **argv)
 			image_info.free(image_info);
 			errno = EXIT_SUCCESS;
 		}
+#ifndef __DEBUG_DEBUG__
 		dlclose(so);
+#endif
 		return errno;
 	}
 

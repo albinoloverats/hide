@@ -144,7 +144,11 @@ static int write_jpeg(image_info_t image_info, void (*progress_update)(uint64_t,
 	return errno;
 }
 
+#ifndef __DEBUG_JPEG__
 static uint64_t info_jpeg(image_info_t *image_info)
+#else
+extern uint64_t info_jpeg(image_info_t *image_info)
+#endif
 {
 	bool t = true;
 	image_info->extra = &t;
@@ -152,7 +156,11 @@ static uint64_t info_jpeg(image_info_t *image_info)
 	return HIDE_CAPACITY;
 }
 
+#ifndef __DEBUG_JPEG__
 static void free_jpeg(image_info_t image_info)
+#else
+extern void free_jpeg(image_info_t image_info)
+#endif
 {
 	free(image_info.buffer[0]);
 	free(image_info.buffer);

@@ -145,22 +145,20 @@ static inline int innerIDCT(int x, int y, const int block[8][8])
 	float sum = 0.0;
 	for (int u = 0; u < 8; u++)
 		for (int v = 0; v < 8; v++)
-			sum += (u ? 1.0 : M_SQRT1_2)    \
-			     * (v ? 1.0 : M_SQRT1_2)    \
-			     *  block[u][v]             \
-			     *  cosf(X * u)             \
+			sum += (u ? 1.0 : M_SQRT1_2) \
+			     * (v ? 1.0 : M_SQRT1_2) \
+			     *  block[u][v]          \
+			     *  cosf(X * u)          \
 			     *  cosf(Y * v);
 	return (int)(sum / 4);
 }
 
-static inline void PerformIDCT(int outBlock[8][8], const int inBlock[8][8])
-{
-	for (int y = 0; y < 8; y++)
-		for (int x = 0; x < 8; x++)
-			outBlock[x][y] = innerIDCT(x, y, inBlock);
+#define PerformIDCT(outBlock, inBlock)                                  \
+{                                                                       \
+	for (int y = 0; y < 8; y++)                                     \
+		for (int x = 0; x < 8; x++)                             \
+			outBlock[x][y] = innerIDCT(x, y, (const int (*)[8])inBlock); \
 }
-
-/**********************************************************************/
 
 #define DequantizeBlock(block, quantBlock)                              \
 {                                                                       \
@@ -244,7 +242,7 @@ static void DecodeSingleBlock(stComponent *comp, uint8_t *outputBuf, int stride)
 
 	// Inverse DCT
 	int val[8][8] = { { 0x0 } };
-	PerformIDCT(val, (const int (*)[8])arrayBlock);
+	PerformIDCT(val, arrayBlock);
 
 	// Level Shift each element (i.e. add 128), and copy to our output
 	uint8_t *outptr = outputBuf;
@@ -636,13 +634,10 @@ static bool IsInHuffmanCodes(int code, int numCodeBits, int numBlocks, stBlock *
 {
 	for (int j = 0; j < numBlocks; j++)
 	{
-		int hufhCode = blocks[j].code;
-		int hufCodeLenBits = blocks[j].length;
-		int hufValue = blocks[j].value;
 		// We've got a match!
-		if ((code == hufhCode) && (numCodeBits == hufCodeLenBits))
+		if ((code == blocks[j].code) && (numCodeBits == blocks[j].length))
 		{
-			*outValue = hufValue;
+			*outValue = blocks[j].value;
 			return true;
 		}
 	}
@@ -652,8 +647,6 @@ static bool IsInHuffmanCodes(int code, int numCodeBits, int numBlocks, stBlock *
 /**********************************************************************/
 
 #define DetermineSign(val, nBits) ((val < (1 << (nBits - 1))) ? val + (-1 << nBits) + 1 : val)
-
-/**********************************************************************/
 
 static void ProcessHuffmanDataUnit(stJpegData *jdata, int indx)
 {
@@ -787,56 +780,38 @@ static void ProcessHuffmanDataUnit(stJpegData *jdata, int indx)
 
 static void ConvertYCrCbtoRGB(int y, int cb, int cr, int *r, int *g, int *b)
 {
-	float red = y + 1.402f * (cb - 128);
-	float green = y - 0.34414f * (cr - 128) - 0.71414f * (cb - 128);
-	float blue = y + 1.772f * (cr - 128);
-
-	*r = byte_limit((int)red, 0);
-	*g = byte_limit((int)green, 0);
-	*b = byte_limit((int)blue, 0);
+	*r = byte_limit((int)(y + 1.402f * (cb - 128)), 0);
+	*g = byte_limit((int)(y - 0.34414f * (cr - 128) - 0.71414f * (cb - 128)), 0);
+	*b = byte_limit((int)(y + 1.772f * (cr - 128)), 0);
 }
 
 /**********************************************************************/
 
 static void YCrCB_to_RGB24_Block8x8(stJpegData *jdata, int w, int h, int imgx, int imgy, int imgw, int imgh)
 {
-	uint8_t *pix;
-
-	int r, g, b;
-
-	const uint8_t *Y = jdata->m_Y;
+	const uint8_t *Y  = jdata->m_Y;
 	const uint8_t *Cb = jdata->m_Cb;
 	const uint8_t *Cr = jdata->m_Cr;
 
-	int olw = 0; // overlap
-	int olh = 0; // overlap
-
-	for (int y = 0; y < (8 * h - olh); y++)
-	{
-		for (int x = 0; x < (8 * w - olw); x++)
+	for (int y = 0; y < (8 * h); y++)
+		for (int x = 0; x < (8 * w); x++)
 		{
-			if (x + imgx >= imgw)
-				continue;
-			if (y + imgy >= imgh)
+			if ((x + imgx >= imgw) || (y + imgy >= imgh))
 				continue;
 
 			int poff = x * 3 + jdata->m_width * 3 * y;
-			pix = &(jdata->m_colourspace[poff]);
+			uint8_t *pix = &(jdata->m_colourspace[poff]);
 
 			int yoff = x + y * (w * 8);
 			int coff = (int)(x * (1.0f / w)) + (int)(y * (1.0f / h)) * 8;
 
-			int yc = Y[yoff];
-			int cb = Cb[coff];
-			int cr = Cr[coff];
-
-			ConvertYCrCbtoRGB(yc, cr, cb, &r, &g, &b);
+			int r, g, b;
+			ConvertYCrCbtoRGB(Y[yoff], Cr[coff], Cb[coff], &r, &g, &b);
 
 			pix[0] = byte_limit(r, 0);
 			pix[1] = byte_limit(g, 0);
 			pix[2] = byte_limit(b, 0);
 		}
-	}
 }
 
 /**********************************************************************/
