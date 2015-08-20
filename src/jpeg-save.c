@@ -259,14 +259,14 @@ static int8_t bytepos = 7;      // bit position in the byte we write (bytenew)
 static uint16_t mask[16] = { 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768 };
 
 // The Huffman tables we'll use:
-static bitstring   YDC_HT[12]   = { 0x0 };
-static bitstring  CbDC_HT[12]   = { 0x0 };
-static bitstring  YAC_HT[256]   = { 0x0 };
-static bitstring CbAC_HT[256]   = { 0x0 };
+static bitstring   YDC_HT[12]   = { { 0x0 } };
+static bitstring  CbDC_HT[12]   = { { 0x0 } };
+static bitstring  YAC_HT[256]   = { { 0x0 } };
+static bitstring CbAC_HT[256]   = { { 0x0 } };
 
 static uint8_t    category_alloc[65535] = { 0x0 };
 static uint8_t   *category      = NULL;     // Here we'll keep the category of the numbers in range: -32767..32767
-static bitstring  bitcode_alloc[65535]  = { 0x0 };
+static bitstring  bitcode_alloc[65535]  = { { 0x0 } };
 static bitstring *bitcode       = NULL;     // their bitcoded representation
 
 // Precalculated tables for a faster YCbCr->RGB transformation

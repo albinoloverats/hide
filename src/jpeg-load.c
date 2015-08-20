@@ -194,7 +194,7 @@ static void DecodeSingleBlock(stComponent *comp, uint8_t *outputBuf, int stride)
 	float *quantptr = comp->m_qTable;
 
 	// Create a temp 8x8, i.e. 64 array for the data
-	int data[64] = { 0 };
+	int data[64] = { 0x0 };
 
 	// Copy our data into the temp array
 	for (int i = 0; i < 64; i++)
@@ -240,15 +240,15 @@ static void DecodeSingleBlock(stComponent *comp, uint8_t *outputBuf, int stride)
 	DequantizeBlock(data, quantptr);
 
 	// De-Zig-Zag
-	int block[64] = { 0 };
+	int block[64] = { 0x0 };
 	DeZigZag(block, data);
 
 	// Create an 8x8 array
-	int arrayBlock[8][8] = { 0 };
+	int arrayBlock[8][8] = { { 0x0 } };
 	TransformArray(arrayBlock, block);
 
 	// Inverse DCT
-	int val[8][8] = { 0 };
+	int val[8][8] = { { 0x0 } };
 	PerformIDCT(val, arrayBlock);
 
 	// Level Shift each element (i.e. add 128), and copy to our
