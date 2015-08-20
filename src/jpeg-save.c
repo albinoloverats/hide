@@ -460,16 +460,14 @@ static void writebits(bitstring bs)
 	}
 }
 
-static void compute_Huffman_table(uint8_t *nrcodes, uint8_t *std_table, bitstring *HT)
-{
-	uint8_t p = 0;
-	uint16_t c = 0;
-	for (int i = 1; i <= 16; i++, c *= 2)
-		for (int j = 1; j <= nrcodes[i]; j++, p++, c++)
-		{
-			HT[std_table[p]].value = c;
-			HT[std_table[p]].length = i;
-		}
+#define compute_Huffman_table(nrcodes, std_table, HT)                   \
+{                                                                       \
+	for (int i = 1, c = 0, p = 0; i <= 16; i++, c *= 2)             \
+		for (int j = 1; j <= nrcodes[i]; j++, p++, c++)         \
+		{                                                       \
+			HT[std_table[p]].value = c;                     \
+			HT[std_table[p]].length = i;                    \
+		}                                                       \
 }
 
 static void init_Huffman_tables(void)
@@ -495,36 +493,48 @@ static void set_numbers_category_and_bitcode(void)
 		{
 			category[nr] = cat;
 			bitcode[nr].length = cat;
-			bitcode[nr].value = (uint16_t) nr;
+			bitcode[nr].value = (uint16_t)nr;
 		}
 		// Negative numbers
 		for (int nr = -(nrupper - 1); nr <= -nrlower; nr++)
 		{
 			category[nr] = cat;
 			bitcode[nr].length = cat;
-			bitcode[nr].value = (uint16_t) (nrupper - 1 + nr);
+			bitcode[nr].value = (uint16_t)(nrupper - 1 + nr);
 		}
 		nrlower <<= 1;
 		nrupper <<= 1;
 	}
 }
 
+#define RED_Y     19595.76400
+#define RED_Cb   -11058.04464
+#define RED_Cr    32768.00000
+
+#define GREEN_Y   38470.13200
+#define GREEN_Cb -21708.95536
+#define GREEN_Cr -27438.76784
+
+#define BLUE_Y     7471.60400
+#define BLUE_Cb   32768.00000
+#define BLUE_Cr   -5328.23216
+
 static void precalculate_YCbCr_tables(void)
 {
 	for (int i = 0; i <= 255; i++)
 	{
 		// red values
-		YRtab[i] = (int32_t)(65536 * 0.299 + 0.5) * i;
-		CbRtab[i] = (int32_t)(65536 * -0.16874 + 0.5) * i;
-		CrRtab[i] = (int32_t)(32768) * i;
+		YRtab[i]  = (int32_t)(RED_Y    * i); // 65536 *  0.29900 + 0.5
+		CbRtab[i] = (int32_t)(RED_Cb   * i); // 65536 * -0.16874 + 0.5
+		CrRtab[i] = (int32_t)(RED_Cr   * i); // 32768
 		// green values
-		YGtab[i] = (int32_t)(65536 * 0.587 + 0.5) * i;
-		CbGtab[i] = (int32_t)(65536 * -0.33126 + 0.5) * i;
-		CrGtab[i] = (int32_t)(65536 * -0.41869 + 0.5) * i;
+		YGtab[i]  = (int32_t)(GREEN_Y  * i); // 65536 *  0.58700 + 0.5
+		CbGtab[i] = (int32_t)(GREEN_Cb * i); // 65536 * -0.33126 + 0.5
+		CrGtab[i] = (int32_t)(GREEN_Cr * i); // 65536 * -0.41869 + 0.5
 		// blue values
-		YBtab[i] = (int32_t)(65536 * 0.114 + 0.5) * i;
-		CbBtab[i] = (int32_t)(32768) * i;
-		CrBtab[i] = (int32_t)(65536 * -0.08131 + 0.5) * i;
+		YBtab[i]  = (int32_t)(BLUE_Y   * i); // 65536 *  0.11400 + 0.5
+		CbBtab[i] = (int32_t)(BLUE_Cb  * i); // 32768
+		CrBtab[i] = (int32_t)(BLUE_Cr  * i); // 65536 * -0.08131 + 0.5
 	}
 }
 

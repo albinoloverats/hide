@@ -340,7 +340,6 @@ int main(int argc, char **argv)
 			errno = EXIT_SUCCESS;
 		}
 		dlclose(so);
-		fprintf(stderr, "%s\n", dlerror());
 		return errno;
 	}
 

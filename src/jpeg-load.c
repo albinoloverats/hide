@@ -131,25 +131,25 @@ typedef struct
 
 /**********************************************************************/
 
+static const float pi_by_16 = M_PI / 16.0;
+/*
+ * TODO optimize this function - an order of magnitude more time
+ * is spent in here (according to gprof)
+ */
 static inline int innerIDCT(int x, int y, const int block[8][8])
 {
-	/*
-	 * TODO optimize this function - an order of magnitude more time
-	 * is spent in here (according to gprof)
-	 */
-#define PI_BY_16 M_PI / 16.0
 	/* these are not subsequently changed */
-	const int X = x * 2 + 1;
-	const int Y = y * 2 + 1;
+	const int X = (x * 2 + 1) * pi_by_16;
+	const int Y = (y * 2 + 1) * pi_by_16;
 
-	float sum = 0;
+	float sum = 0.0;
 	for (int u = 0; u < 8; u++)
 		for (int v = 0; v < 8; v++)
 			sum += (u ? 1.0 : M_SQRT1_2)    \
 			     * (v ? 1.0 : M_SQRT1_2)    \
 			     *  block[u][v]             \
-			     *  cosf(X * u * PI_BY_16)  \
-			     *  cosf(Y * v * PI_BY_16);
+			     *  cosf(X * u)             \
+			     *  cosf(Y * v);
 	return (int)(sum / 4);
 }
 
@@ -162,27 +162,23 @@ static inline void PerformIDCT(int outBlock[8][8], const int inBlock[8][8])
 
 /**********************************************************************/
 
-static inline void DequantizeBlock(int block[64], const float quantBlock[64])
-{
-	for (int c = 0; c < 64; c++)
-		block[c] = (int)(block[c] * quantBlock[c]);
+#define DequantizeBlock(block, quantBlock)                              \
+{                                                                       \
+	for (int c = 0; c < 64; c++)                                    \
+		block[c] = (int)(block[c] * quantBlock[c]);             \
 }
 
-/**********************************************************************/
-
-static inline void DeZigZag(int outBlock[64], const int inBlock[64])
-{
-	for (int i = 0; i < 64; i++)
-		outBlock[i] = inBlock[ZigZagArray[i]];
+#define DeZigZag(outBlock, inBlock)                                     \
+{                                                                       \
+	for (int i = 0; i < 64; i++)                                    \
+		outBlock[i] = inBlock[ZigZagArray[i]];                  \
 }
 
-/**********************************************************************/
-
-static inline void TransformArray(int outArray[8][8], const int inArray[64])
-{
-	for (int y = 0, cc = 0; y < 8; y++)
-		for (int x = 0; x < 8; x++, cc++)
-			outArray[x][y] = inArray[cc];
+#define TransformArray(outArray, inArray)                               \
+{                                                                       \
+	for (int y = 0, cc = 0; y < 8; y++)                             \
+		for (int x = 0; x < 8; x++, cc++)                       \
+			outArray[x][y] = inArray[cc];                   \
 }
 
 /***************************************************************************/
@@ -331,11 +327,11 @@ static int ParseSOF(stJpegData *jdata, const uint8_t *stream)
 
 /**********************************************************************/
 
-static inline void BuildQuantizationTable(float *qtable, const uint8_t *ref_table)
-{
-	for (int i = 0, c = 0; i < 8; i++)
-		for (int j = 0; j < 8; j++, c++)
-			qtable[c] = ref_table[c];
+#define BuildQuantizationTable(qtable, ref_table)                       \
+{                                                                       \
+	for (int i = 0, c = 0; i < 8; i++)                              \
+		for (int j = 0; j < 8; j++, c++)                        \
+			qtable[c] = ref_table[c];                       \
 }
 
 /**********************************************************************/
@@ -941,7 +937,7 @@ extern bool jpeg_decode_data(FILE *file, jpeg_message_t *msg, jpeg_image_t *info
 	// Allocate memory for our decoded jpg structure, all our data will be
 	// decompressed and stored in here for the various stages of our jpeg decoding
 	stJpegData jdec;
-    memset(&jdec, 0x00, sizeof jdec);
+	memset(&jdec, 0x00, sizeof jdec);
 
 	// Start Parsing.....reading & storing data
 	if (JpegParseHeader(&jdec, buf) < 0)
