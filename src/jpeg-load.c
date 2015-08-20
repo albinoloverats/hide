@@ -940,7 +940,8 @@ extern bool jpeg_decode_data(FILE *file, jpeg_message_t *msg, jpeg_image_t *info
 
 	// Allocate memory for our decoded jpg structure, all our data will be
 	// decompressed and stored in here for the various stages of our jpeg decoding
-	stJpegData jdec = { 0x0 };
+	stJpegData jdec;
+    memset(&jdec, 0x00, sizeof jdec);
 
 	// Start Parsing.....reading & storing data
 	if (JpegParseHeader(&jdec, buf) < 0)
