@@ -205,15 +205,13 @@ static void DecodeSingleBlock(stComponent *comp, uint8_t *outputBuf, int stride)
 	static uint8_t bit = 1;
 	static bool aloc = false;
 
-	for (int i = 0; i < 64 && !aloc && offset < message->size + sizeof message->size; i++)
+	for (int i = 0; i < 64 && !(aloc && offset >= message->size + sizeof message->size); i++)
 		if (data[i] > 1)
 		{
 			switch (action)
 			{
 				case JPEG_LOAD_FIND:
 				{
-					if (aloc && offset > message->size + sizeof message->size)
-						goto eol;
 					uint8_t *ptr = (aloc ? message->data : (uint8_t *)&message->size) + offset;
 					if (data[i] & 0x01)
 						*ptr |= (0xFF & bit);
@@ -236,7 +234,6 @@ static void DecodeSingleBlock(stComponent *comp, uint8_t *outputBuf, int stride)
 					break;
 			}
 		}
-eol:
 
 
 	// De-Quantize
@@ -1011,10 +1008,10 @@ extern bool jpeg_decode_data(FILE *file, jpeg_message_t *msg, jpeg_image_t *info
 	info->width = jdec.m_width;
 	info->height = jdec.m_height;
 
-	info->rgb = malloc(sizeof (uint8_t *) * info->height);
+	info->rgb = calloc(info->height, sizeof (uint8_t *));
 	for (uint32_t i = 0; i < info->height; i++)
 	{
-		info->rgb[i] = malloc(3 * info->width);
+		info->rgb[i] = calloc(info->width, 3);
 		memcpy(info->rgb[i], jdec.m_rgb + i * info->width * 3, info->width * 3);
 	}
 

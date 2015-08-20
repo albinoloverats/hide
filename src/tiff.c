@@ -32,6 +32,10 @@
 
 #include "hide.h"
 
+#ifndef COMPRESSION_LZMA
+    #define COMPRESSION_LZMA 34925
+#endif
+
 static bool is_tiff(char *file_name)
 {
 	TIFFSetErrorHandler(NULL);
