@@ -50,6 +50,7 @@ typedef struct
 	char *file;
 	uint64_t size;
 	bool hide;
+	bool fill;
 }
 data_info_t;
 
@@ -67,11 +68,18 @@ image_type_t;
 typedef struct
 {
 	char *image_in;
-	char *file;
+	char *data_file;
 	char *image_out;
 }
 hide_files_t;
 
-extern void *process(void *files);
+typedef struct
+{
+	hide_files_t files;
+	bool fill;
+}
+process_options_t;
+
+extern void *process(void *options);
 
 #endif

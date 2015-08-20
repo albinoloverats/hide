@@ -82,7 +82,13 @@ static int process_file(data_info_t data_info, image_info_t image_info, void (*p
 
 			if (data_info.hide)
 			{
-				unsigned char c = y == 0 && x < sizeof data_info.size ? z[x] : map[i];
+				unsigned char c;
+				if (y == 0 && x < sizeof data_info.size && !data_info.fill)
+					c = z[x];
+				else if (i < ntohll(data_info.size))
+					c = map[i];
+				else /* TODO use something more secure */
+					c = (uint8_t)lrand48();
 				ptr[0] = (ptr[0] & 0xF8) | ((c & 0xE0) >> 5); // r 3 lsb
 				ptr[1] = (ptr[1] & 0xFC) | ((c & 0x18) >> 3); // g 2 lsb
 				ptr[2] = (ptr[2] & 0xF8) |  (c & 0x07);       // b 3 lsb
@@ -92,7 +98,7 @@ static int process_file(data_info_t data_info, image_info_t image_info, void (*p
 				unsigned char c = (ptr[0] & 0x07) << 5;
 				c |= (ptr[1] & 0x03) << 3;
 				c |= (ptr[2] & 0x07);
-				if (y == 0 && x < sizeof data_info.size)
+				if (y == 0 && x < sizeof data_info.size && !data_info.fill)
 				{
 					z[x] = c;
 					if (x == sizeof data_info.size - 1)
@@ -101,6 +107,15 @@ static int process_file(data_info_t data_info, image_info_t image_info, void (*p
 						if ((map = mmap(NULL, ntohll(data_info.size), PROT_READ | PROT_WRITE, MAP_SHARED, f, 0)) == MAP_FAILED)
 							die("Could not map file %s into memory", data_info.file);
 					}
+				}
+				else if (data_info.fill && map == NULL)
+				{
+					data_info.size = htonll(image_info.height * image_info.width * image_info.bpp);
+					ftruncate(f, ntohll(data_info.size));
+					if ((map = mmap(NULL, ntohll(data_info.size), PROT_READ | PROT_WRITE, MAP_SHARED, f, 0)) == MAP_FAILED)
+						die("Could not map file %s into memory", data_info.file);
+					map[i] = c;
+					errno = EXIT_SUCCESS;
 				}
 				else
 					map[i] = c;
@@ -111,7 +126,7 @@ static int process_file(data_info_t data_info, image_info_t image_info, void (*p
 				if (progress_update)
 					progress_update(i, ntohll(data_info.size));
 			}
-			if (map && i >= ntohll(data_info.size))
+			if (map && i >= ntohll(data_info.size) && !data_info.fill)
 				goto done;
 		}
 	}
@@ -226,9 +241,10 @@ static void progress_current_update(uint64_t i, uint64_t j)
 
 extern void *process(void *args)
 {
-	hide_files_t *files = args;
-	image_info_t image_info = { files->image_in, NULL, NULL, NULL, NULL, 0, 0, 0, NULL, NULL };
-	data_info_t data_info = { files->file, 0, false };
+	process_options_t *options = args;
+	hide_files_t files = options->files;
+	image_info_t image_info = { files.image_in, NULL, NULL, NULL, NULL, 0, 0, 0, NULL, NULL };
+	data_info_t data_info = { files.data_file, 0, false, options->fill };
 
 	void *so = find_supported_formats(&image_info);
 	if (!so)
@@ -246,13 +262,13 @@ extern void *process(void *args)
 	 * current hack for JPEG images: use ->extra to indicate whether
 	 * hiding or finding
 	 */
-	data_info.hide = (bool)files->image_out;
+	data_info.hide = (bool)files.image_out;
 	image_info.extra = &data_info.hide;
 
 #ifndef __DEBUG__
 	*ui.status = CLI_RUN;
 	ui.total->offset = 0;
-	ui.total->size = files->image_out ? 3 : 2;
+	ui.total->size = files.image_out ? 3 : 2;
 #endif
 
 	/*
@@ -261,7 +277,7 @@ extern void *process(void *args)
 	if (image_info.read(&image_info, progress_current_update))
 		die("Failed to read source image");
 
-	if (files->image_out)
+	if (files.image_out)
 	{
 		if (!will_fit(&data_info, image_info))
 			die("Too much data to hide; find a larger image\nAvailable capacity: %" PRIu64 " bytes\n", HIDE_CAPACITY);
@@ -279,7 +295,7 @@ extern void *process(void *args)
 #ifndef __DEBUG__
 		ui.total->offset++;
 #endif
-		image_info.file = files->image_out;
+		image_info.file = files.image_out;
 		if (image_info.write(image_info, progress_current_update))
 			die("Failed to write output image");
 	}
@@ -312,10 +328,10 @@ done:
 
 int main(int argc, char **argv)
 {
-	if (argc < 2 || argc > 4)
+	if (argc < 2 || argc > 5)
 	{
-		fprintf(stderr, "Usage: %s <source image> <file to hide> <output image>\n", argv[0]);
-		fprintf(stderr, "       %s <image> <recovered file>\n", argv[0]);
+		fprintf(stderr, "Usage: %s [-f] <source image> <file to hide> <output image>\n", argv[0]);
+		fprintf(stderr, "       %s [-f] <image> <recovered file>\n", argv[0]);
 		fprintf(stderr, "       %s <image>\n", argv[0]);
 		find_supported_formats(NULL);
 		return EXIT_FAILURE;
@@ -352,7 +368,10 @@ int main(int argc, char **argv)
 		return errno;
 	}
 
-	hide_files_t files = { argv[1], argv[2], argv[3] };
+	int o = strcmp(argv[1], "-f") ? 0 : 1;
+
+	hide_files_t files = { argv[o + 1], argv[o + 2], argv[o + 3] };
+	process_options_t options = { files, o };
 
 #ifndef __DEBUG__
 	{
@@ -372,7 +391,7 @@ int main(int argc, char **argv)
 	pthread_attr_t a;
 	pthread_attr_init(&a);
 	pthread_attr_setdetachstate(&a, PTHREAD_CREATE_JOINABLE);
-	pthread_create(t, &a, process, &files);
+	pthread_create(t, &a, process, &options);
 	pthread_attr_destroy(&a);
 
 	cli_display(&ui);
@@ -380,7 +399,7 @@ int main(int argc, char **argv)
 	pthread_join(*t, NULL);
 	free(t);
 #else
-	process(&files);
+	process(&options);
 #endif
 
 	return errno;
