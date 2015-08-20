@@ -248,7 +248,7 @@ static void DecodeSingleBlock(stComponent *comp, uint8_t *outputBuf, int stride)
 
 	// Inverse DCT
 	int val[8][8] = { { 0x0 } };
-	PerformIDCT(val, arrayBlock);
+	PerformIDCT(val, (const int (*)[8])arrayBlock);
 
 	// Level Shift each element (i.e. add 128), and copy to our output
 	uint8_t *outptr = outputBuf;
