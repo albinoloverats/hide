@@ -118,7 +118,6 @@ typedef struct
 
 /**********************************************************************/
 
-//static inline void GenHuffCodes(int num_codes, stBlock *arr, uint8_t *huffVal)
 #define GenHuffCodes(num_codes, arr, huffVal)                           \
 {                                                                       \
 	for (int cc = 0, hc = 0, lc = 1; cc < num_codes; cc++, hc++)    \
@@ -251,8 +250,7 @@ static void DecodeSingleBlock(stComponent *comp, uint8_t *outputBuf, int stride)
 	int val[8][8] = { { 0x0 } };
 	PerformIDCT(val, arrayBlock);
 
-	// Level Shift each element (i.e. add 128), and copy to our
-	// output
+	// Level Shift each element (i.e. add 128), and copy to our output
 	uint8_t *outptr = outputBuf;
 	for (int y = 0; y < 8; y++)
 	{
@@ -267,11 +265,11 @@ static void DecodeSingleBlock(stComponent *comp, uint8_t *outputBuf, int stride)
 
 /**********************************************************************/
 
-// Takes two array of bits, and build the huffman table for size, and code
 
 /**********************************************************************/
 static void BuildHuffmanTable(const uint8_t *bits, stHuffmanTable *HT)
 {
+	// Takes two array of bits, and build the huffman table for size, and code
 	for (int j = 1; j <= 16; j++)
 		HT->m_length[j] = bits[j];
 
@@ -597,7 +595,6 @@ static int JpegParseHeader(stJpegData *jdata, const uint8_t *buf)
 static uint32_t g_reservoir = 0;
 static uint32_t g_nbits_in_reservoir = 0;
 
-//static inline void FillNBits(const uint8_t **stream, int nbits_wanted)
 #define FillNBits(stream, nbits_wanted)                                 \
 {                                                                       \
 	while (g_nbits_in_reservoir < (unsigned)nbits_wanted)           \
@@ -611,7 +608,6 @@ static uint32_t g_nbits_in_reservoir = 0;
 	}                                                               \
 }
 
-//static inline void shift_bits(int nbits_wanted)
 #define shift_bits(nbits_wanted)                                        \
 {                                                                       \
 	g_nbits_in_reservoir -= nbits_wanted;                           \
@@ -632,7 +628,6 @@ static inline int LookNBits(const uint8_t **stream, int nbits_wanted)
 	return g_reservoir >> (g_nbits_in_reservoir - (nbits_wanted));
 }
 
-//static inline void SkipNBits(const uint8_t **stream, int nbits_wanted)
 #define SkipNBits(stream, nbits_wanted)                                 \
 {                                                                       \
 	FillNBits(stream, nbits_wanted);                                \
@@ -660,15 +655,6 @@ static bool IsInHuffmanCodes(int code, int numCodeBits, int numBlocks, stBlock *
 
 /**********************************************************************/
 
-//static inline int DetermineSign(int val, int nBits)
-//{
-//	bool negative = val < (1 << (nBits - 1));
-//	if (negative)
-//		// (-1 << (s)), makes the last bit a 1, so we have 1000,0000 for example for 8 bits
-//		val = val + (-1 << (nBits)) + 1;
-//	// Else its unsigned, just return
-//	return val;
-//}
 #define DetermineSign(val, nBits) ((val < (1 << (nBits - 1))) ? val + (-1 << nBits) + 1 : val)
 
 /**********************************************************************/
@@ -678,14 +664,10 @@ static void ProcessHuffmanDataUnit(stJpegData *jdata, int indx)
 	stComponent *c = &jdata->m_component_info[indx];
 
 	// Start Huffman decoding
-
 	int16_t DCT_tcoeff[64] = { 0x0 };
 
 	bool found = false;
 	int decodedValue = 0;
-
-//      DumpHufCodes(c->m_dcTable);
-//      DumpHufCodes(c->m_acTable);
 
 	// Scan Decode Resync
 	if (jdata->m_restart_interval > 0)
@@ -702,8 +684,7 @@ static void ProcessHuffmanDataUnit(stJpegData *jdata, int indx)
 			// so each time we get a resync, it will count from 0 to 4 then restart :)
 		}
 
-	// First thing is get the 1 DC coefficient at the start of our 64 element
-	// block
+	// First thing is get the 1 DC coefficient at the start of our 64 element block
 	for (int k = 1; k < 16; k++)
 	{
 		// Keep grabbing one bit at a time till we find one thats a huffman code
@@ -737,7 +718,6 @@ static void ProcessHuffmanDataUnit(stJpegData *jdata, int indx)
 				DCT_tcoeff[0] = data + c->m_previousDC;
 				c->m_previousDC = DCT_tcoeff[0];
 			}
-
 			// Found so we can exit out
 			break;
 		}
@@ -748,13 +728,6 @@ static void ProcessHuffmanDataUnit(stJpegData *jdata, int indx)
 		fprintf(stderr, "Fail @ %s:%d\n", __FILE__, __LINE__);
 		exit(-1);
 	}
-
-	//if ( jdata->m_stream[0]==0xff && jdata->m_stream[1]!=0x00)
-	//{
-	//      jdata->m_stream += 2;
-	//      g_reservoir = 0;
-	//      g_nbits_in_reservoir = 0;
-	//}
 
 	// Second, the 63 AC coefficient
 	int nr = 1;
@@ -796,13 +769,6 @@ static void ProcessHuffmanDataUnit(stJpegData *jdata, int indx)
 						fprintf(stderr, "Fail @ %s:%d\n", __FILE__, __LINE__);
 						exit(-1);
 					}
-
-					//if ( jdata->m_stream[0]==0xff && jdata->m_stream[1]!=0x00)
-					//{
-					//      jdata->m_stream += 2;
-					//      g_reservoir = 0;
-					//      g_nbits_in_reservoir = 0;
-					//}
 
 					int16_t data = GetNBits(&jdata->m_stream, size_val);
 					data = DetermineSign(data, size_val);
@@ -847,16 +813,7 @@ static void YCrCB_to_RGB24_Block8x8(stJpegData *jdata, int w, int h, int imgx, i
 	const uint8_t *Cr = jdata->m_Cr;
 
 	int olw = 0; // overlap
-//      if ( imgx > abs(imgw-8*w) )
-//      {
-//              olw = (imgw-imgx)*w + 1;
-//      }
-
 	int olh = 0; // overlap
-//      if ( imgy > abs(imgh-8*h) )
-//      {
-//              olh = (imgh-imgy)*2 + 1;
-//      }
 
 	for (int y = 0; y < (8 * h - olh); y++)
 	{
@@ -945,23 +902,14 @@ static int JpegDecode(stJpegData *jdata)
 	int xstride_by_mcu = 8 * hFactor;
 	int ystride_by_mcu = 8 * vFactor;
 
-	// Don't forget to that block can be either 8 or 16 lines
-	//uint32_t bytes_per_blocklines = jdata->m_width * 3 * ystride_by_mcu;
-	//uint32_t bytes_per_mcu = 3 * xstride_by_mcu;
-
 	// Just the decode the image by 'macroblock' (size is 8x8, 8x16, or 16x16)
 	for (int y = 0; y < (int)jdata->m_height; y += ystride_by_mcu)
 	{
 		for (int x = 0; x < (int)jdata->m_width; x += xstride_by_mcu)
 		{
 			jdata->m_colourspace = jdata->m_rgb + x * 3 + (y * jdata->m_width * 3);
-
 			// Decode MCU Plane
 			DecodeMCU(jdata, hFactor, vFactor);
-
-			//      if (x>20) continue;
-			//      if (y>8) continue;
-
 			YCrCB_to_RGB24_Block8x8(jdata, hFactor, vFactor, x, y, jdata->m_width, jdata->m_height);
 		}
 	}
