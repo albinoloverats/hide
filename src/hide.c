@@ -299,19 +299,19 @@ extern void *process(void *args)
 #ifndef __DEBUG__
 	ui.total->offset = ui.total->size;
 #endif
-	dlclose(so);
 	errno = EXIT_SUCCESS;
 done:
+	dlclose(so);
 #ifndef __DEBUG__
 	*ui.status = CLI_DONE;
-#endif
 	pthread_exit(&errno);
+#else
+	return &errno;
+#endif
 }
 
 int main(int argc, char **argv)
 {
-	setlocale(LC_NUMERIC, "");
-
 	if (argc < 2 || argc > 4)
 	{
 		fprintf(stderr, "Usage: %s <source image> <file to hide> <output image>\n", argv[0]);
@@ -320,19 +320,7 @@ int main(int argc, char **argv)
 		find_supported_formats(NULL);
 		return EXIT_FAILURE;
 	}
-
-#ifndef __DEBUG__
-	{
-		cli_status_e ui_status = CLI_INIT;
-		cli_progress_t ui_current = { 0, 1 }; /* updated after reading image */
-		cli_progress_t ui_total = { 0, 3 }; /* maximum of 3 steps (read, update, write) */
-		ui.status = &ui_status;
-		ui.current = &ui_current;
-		ui.total = &ui_total;
-	}
-#endif
-
-	if (argc == 2)
+	else if (argc == 2)
 	{
 		image_info_t image_info = { argv[1], NULL, NULL, NULL, NULL, 0, 0, 0, NULL, NULL };
 		void *so = find_supported_formats(&image_info);
@@ -346,17 +334,27 @@ int main(int argc, char **argv)
 		}
 		else
 		{
+			setlocale(LC_NUMERIC, "");
 			printf("File capacity: %'" PRIu64 " bytes\n", image_info.info(&image_info));
 			image_info.free(image_info);
 			errno = EXIT_SUCCESS;
 		}
 		dlclose(so);
+		fprintf(stderr, "%s\n", dlerror());
 		return errno;
 	}
 
 	hide_files_t files = { argv[1], argv[2], argv[3] };
 
 #ifndef __DEBUG__
+	{
+		cli_status_e ui_status = CLI_INIT;
+		cli_progress_t ui_current = { 0, 1 }; /* updated after reading image */
+		cli_progress_t ui_total = { 0, 3 }; /* maximum of 3 steps (read, update, write) */
+		ui.status = &ui_status;
+		ui.current = &ui_current;
+		ui.total = &ui_total;
+	}
 	/*
 	 * TODO start process() in own thread, then call cli_display()
 	 *
