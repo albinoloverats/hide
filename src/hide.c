@@ -263,7 +263,7 @@ extern void *process(void *args)
 	 * hiding or finding
 	 */
 	data_info.hide = (bool)files.image_out;
-	image_info.extra = &data_info.hide;
+	image_info.extra = &data_info;
 
 #ifndef __DEBUG__
 	*ui.status = CLI_RUN;

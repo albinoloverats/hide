@@ -57,9 +57,10 @@ static int read_jpeg(image_info_t *image_info, void (*progress_update)(uint64_t,
 
 	jpeg_message_t msg = { 0x00, NULL };
 	jpeg_image_t *image = calloc(sizeof (jpeg_image_t), 1);
-	jpeg_load_e action = *(bool *)image_info->extra ? JPEG_LOAD_READ : JPEG_LOAD_FIND;
+	data_info_t extra = *(data_info_t *)image_info->extra;
+	jpeg_load_e action = extra.hide ? JPEG_LOAD_READ : JPEG_LOAD_FIND;
 
-	if (!jpeg_decode_data(fp, &msg, image, action))
+	if (!jpeg_decode_data(fp, &msg, image, action, extra.fill))
 		goto clean_up;
 
 	if (action == JPEG_LOAD_FIND)

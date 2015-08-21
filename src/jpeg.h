@@ -47,7 +47,7 @@ typedef struct
 jpeg_image_t;
 
 
-extern bool jpeg_decode_data(FILE *, jpeg_message_t *, jpeg_image_t *, jpeg_load_e);
+extern bool jpeg_decode_data(FILE *, jpeg_message_t *, jpeg_image_t *, jpeg_load_e, bool);
 extern void jpeg_encode_data(FILE *, jpeg_message_t *, jpeg_image_t *);
 
 #endif /* _HIDE_JPEG_H */

@@ -42,6 +42,7 @@
 
 static jpeg_message_t *message;
 static jpeg_load_e action;
+static uint64_t fill_size = 0;
 
 
 static const int cY = 1;
@@ -220,7 +221,7 @@ static void DecodeSingleBlock(stComponent *comp, uint8_t *outputBuf, int stride)
 					}
 					if (offset >= sizeof message->size && !aloc)
 					{
-						message->size = ntohll(message->size);
+						message->size = fill_size ? : ntohll(message->size);
 						message->data = calloc(message->size + sizeof message->size, sizeof (uint8_t));
 						aloc = true;
 					}
@@ -896,7 +897,7 @@ static int JpegDecode(stJpegData *jdata)
 /**********************************************************************/
 
 
-extern bool jpeg_decode_data(FILE *file, jpeg_message_t *msg, jpeg_image_t *info, jpeg_load_e a)
+extern bool jpeg_decode_data(FILE *file, jpeg_message_t *msg, jpeg_image_t *info, jpeg_load_e a, bool fill)
 {
 	message = msg;
 	action = a;
@@ -918,6 +919,9 @@ extern bool jpeg_decode_data(FILE *file, jpeg_message_t *msg, jpeg_image_t *info
 		free(buf);
 		return false;
 	}
+
+	if (fill)
+		fill_size = jdec.m_width * jdec.m_height * 3;
 
 	// We've read it all in, now start using it, to decompress and create rgb values
 	JpegDecode(&jdec);
