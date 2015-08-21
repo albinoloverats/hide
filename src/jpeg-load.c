@@ -108,7 +108,7 @@ typedef struct
 	stHuffmanTable m_HTAC[HUFFMAN_TABLES];  // AC huffman tables
 
 	// Temp space used after the IDCT to store each components
-	uint8_t m_Y[64 * 4];
+	uint8_t m_Y[256];
 	uint8_t m_Cr[64];
 	uint8_t m_Cb[64];
 
@@ -131,16 +131,15 @@ typedef struct
 
 /**********************************************************************/
 
-static const double pi_by_16 = M_PI / 16.0;
+#define PI_BY_16 0.19634954084936207740391521145497
 /*
- * TODO optimize this function - an order of magnitude more time
- * is spent in here (according to gprof)
+ * This is the biggest bottleneck when decoding an image.
  */
 __attribute__((optimize("unroll-loops")))
 static inline int innerIDCT(int x, int y, const int block[8][8])
 {
-	const double X = ((x << 1) + 1.0) * pi_by_16;
-	const double Y = ((y << 1) + 1.0) * pi_by_16;
+	const double X = ((x << 1) + 1) * PI_BY_16;
+	const double Y = ((y << 1) + 1) * PI_BY_16;
 
 	double cu = M_SQRT1_2;
 	double cv = M_SQRT1_2;
@@ -148,14 +147,10 @@ static inline int innerIDCT(int x, int y, const int block[8][8])
 	double sum = 0.0;
 	for (int u = 0; u < 8; u++, cu = 1.0)
 	{
-		/* asm ("fcos" : "+t" (cx)); */
 		const double cx = cos(X * u);
-
 		for (int v = 0; v < 8; v++, cv = 1.0)
 		{
-			/* asm ("fcos" : "+t" (cy)); */
 			const double cy = cos(Y * v);
-
 			sum += cu * cv * block[u][v] * cx * cy;
 		}
 	}
