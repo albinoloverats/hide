@@ -43,7 +43,7 @@ debug-hide:
 	-@echo "built ‘$(SOURCE)’ → ‘hide’"
 
 debug-profile-jpeg:
-	 @$(CC) $(CFLAGS) $(CPPFLAGS) $(LIBS) $(SOURCE) -lm src/jpeg.c src/jpeg-load.c src/jpeg-save.c $(DEBUG) -pg -lc -o hide
+	 @$(CC) $(CFLAGS) $(CPPFLAGS) -D__DEBUG_JPEG__ $(LIBS) $(SOURCE) -lm src/jpeg.c src/jpeg-load.c src/jpeg-save.c $(DEBUG) -pg -lc -o hide
 	-@echo "built ‘$(SOURCE)’ → ‘hide’"
 
 #debug-hide-gui:
