@@ -136,21 +136,30 @@ static const float pi_by_16 = M_PI / 16.0;
  * TODO optimize this function - an order of magnitude more time
  * is spent in here (according to gprof)
  */
+__attribute__((optimize("unroll-loops")))
 static inline int innerIDCT(int x, int y, const int block[8][8])
 {
-	/* these are not subsequently changed */
-	const float X = (x * 2 + 1) * pi_by_16;
-	const float Y = (y * 2 + 1) * pi_by_16;
+	const float X = ((x << 1) + 1.0) * pi_by_16;
+	const float Y = ((y << 1) + 1.0) * pi_by_16;
+
+	float cu = M_SQRT1_2;
+	float cv = M_SQRT1_2;
 
 	float sum = 0.0;
-	for (int u = 0; u < 8; u++)
-		for (int v = 0; v < 8; v++)
-			sum += (u ? 1.0 : M_SQRT1_2) \
-			     * (v ? 1.0 : M_SQRT1_2) \
-			     *  block[u][v]          \
-			     *  cosf(X * u)          \
-			     *  cosf(Y * v);
-	return (int)(sum / 4);
+	for (int u = 0; u < 8; u++, cu = 1.0)
+	{
+		/* asm ("fcos" : "+t" (cx)); */
+		const float cx = cosf(X * u);
+
+		for (int v = 0; v < 8; v++, cv = 1.0)
+		{
+			/* asm ("fcos" : "+t" (cy)); */
+			const float cy = cosf(Y * v);
+
+			sum += cu * cv * block[u][v] * cx * cy;
+		}
+	}
+	return (int)(sum / 4.0);
 }
 
 #define PerformIDCT(outBlock, inBlock)                                  \
@@ -633,14 +642,11 @@ static inline int LookNBits(const uint8_t **stream, int nbits_wanted)
 static bool IsInHuffmanCodes(int code, int numCodeBits, int numBlocks, stBlock *blocks, int *outValue)
 {
 	for (int j = 0; j < numBlocks; j++)
-	{
-		// We've got a match!
-		if ((code == blocks[j].code) && (numCodeBits == blocks[j].length))
+		if (code == blocks[j].code && numCodeBits == blocks[j].length)
 		{
 			*outValue = blocks[j].value;
-			return true;
+			return true; // We've got a match!
 		}
-	}
 	return false;
 }
 
