@@ -281,8 +281,8 @@ static int32_t CrRtab[256]      = { 0x0 };
 static int32_t CrGtab[256]      = { 0x0 };
 static int32_t CrBtab[256]      = { 0x0 };
 
-static float  fdtbl_Y[64]       = { 0x0 };
-static float fdtbl_Cb[64]       = { 0x0 };  // the same with the fdtbl_Cr[64]
+static double  fdtbl_Y[64]       = { 0x0 };
+static double fdtbl_Cb[64]       = { 0x0 };  // the same with the fdtbl_Cr[64]
 
 static colorRGB *RGB_buffer     = NULL;     // image to be encoded
 static uint32_t Ximage;
@@ -472,9 +472,9 @@ static void writebits(bitstring bs)
 
 static void init_Huffman_tables(void)
 {
-	compute_Huffman_table(std_dc_luminance_nrcodes, std_dc_luminance_values, YDC_HT);
+	compute_Huffman_table(std_dc_luminance_nrcodes,   std_dc_luminance_values,   YDC_HT);
 	compute_Huffman_table(std_dc_chrominance_nrcodes, std_dc_chrominance_values, CbDC_HT);
-	compute_Huffman_table(std_ac_luminance_nrcodes, std_ac_luminance_values, YAC_HT);
+	compute_Huffman_table(std_ac_luminance_nrcodes,   std_ac_luminance_values,   YAC_HT);
 	compute_Huffman_table(std_ac_chrominance_nrcodes, std_ac_chrominance_values, CbAC_HT);
 }
 
@@ -542,7 +542,7 @@ static void precalculate_YCbCr_tables(void)
 // Forward DCT routine idea taken from Independent JPEG Group's C source for
 // JPEG encoders/decoders
 
-// For float AA&N IDCT method, divisors are equal to quantization
+// For double AA&N IDCT method, divisors are equal to quantization
 // coefficients scaled by scalefactor[row]*scalefactor[col], where
 // scalefactor[0] = 1
 // scalefactor[k] = cos(k*M_PI/16) * sqrt(2)    for k=1..7
@@ -554,26 +554,33 @@ static void prepare_quant_tables(void)
 	for (int i = 0, row = 0; row < 8; row++)
 		for (int col = 0; col < 8; col++, i++)
 		{
-			fdtbl_Y[i] = (float)(1.0 / ((double)DQTinfo.Ytable[zigzag[i]] * AAN_SCALE_FACTOR[row] * AAN_SCALE_FACTOR[col] * 8.0));
-			fdtbl_Cb[i] = (float)(1.0 / ((double)DQTinfo.Cbtable[zigzag[i]] * AAN_SCALE_FACTOR[row] * AAN_SCALE_FACTOR[col] * 8.0));
+			fdtbl_Y[i] = 1.0 /                   \
+				((DQTinfo.Ytable[zigzag[i]]  \
+				* AAN_SCALE_FACTOR[row]      \
+				* AAN_SCALE_FACTOR[col])     \
+				* 8);
+			fdtbl_Cb[i] = 1.0 /                  \
+				((DQTinfo.Cbtable[zigzag[i]] \
+				* AAN_SCALE_FACTOR[row]      \
+				* AAN_SCALE_FACTOR[col])     \
+				* 8);
 		}
 }
 
-static void fdct_and_quantization(int8_t *data, float *fdtbl, int16_t *outdata)
+static void fdct_and_quantization(int8_t *data, double *fdtbl, int16_t *outdata)
 {
-	float tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
-	float tmp10, tmp11, tmp12, tmp13;
-	float z1, z2, z3, z4, z5, z11, z13;
-	float *dataptr;
-	float datafloat[64];
-	int8_t ctr;
-	uint8_t i;
-	for (i = 0; i < 64; i++)
+	double tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
+	double tmp10, tmp11, tmp12, tmp13;
+	double z1, z2, z3, z4, z5, z11, z13;
+	double *dataptr;
+	double datafloat[64];
+
+	for (int i = 0; i < 64; i++)
 		datafloat[i] = data[i];
 
 	// Pass 1: process rows.
 	dataptr = datafloat;
-	for (ctr = 7; ctr >= 0; ctr--)
+	for (int i = 7; i >= 0; i--)
 	{
 		tmp0 = dataptr[0] + dataptr[7];
 		tmp7 = dataptr[0] - dataptr[7];
@@ -586,45 +593,45 @@ static void fdct_and_quantization(int8_t *data, float *fdtbl, int16_t *outdata)
 
 		// Even part
 
-		tmp10 = tmp0 + tmp3; // phase 2
+		tmp10 = tmp0 + tmp3;                // phase 2
 		tmp13 = tmp0 - tmp3;
 		tmp11 = tmp1 + tmp2;
 		tmp12 = tmp1 - tmp2;
 
-		dataptr[0] = tmp10 + tmp11; // phase 3
+		dataptr[0] = tmp10 + tmp11;         // phase 3
 		dataptr[4] = tmp10 - tmp11;
 
-		z1 = (tmp12 + tmp13) * ((float)0.707106781); // c4
-		dataptr[2] = tmp13 + z1; // phase 5
+		z1 = 0.707106781 * (tmp12 + tmp13); // c4
+		dataptr[2] = tmp13 + z1;            // phase 5
 		dataptr[6] = tmp13 - z1;
 
 		// Odd part
 
-		tmp10 = tmp4 + tmp5; // phase 2
+		tmp10 = tmp4 + tmp5;                // phase 2
 		tmp11 = tmp5 + tmp6;
 		tmp12 = tmp6 + tmp7;
 
 		// The rotator is modified from fig 4-8 to avoid extra negations
-		z5 = (tmp10 - tmp12) * ((float)0.382683433);    // c6
-		z2 = ((float)0.541196100) * tmp10 + z5;         // c2-c6
-		z4 = ((float)1.306562965) * tmp12 + z5;         // c2+c6
-		z3 = tmp11 * ((float)0.707106781);              // c4
+		z5 = 0.382683433 * (tmp10 - tmp12); // c6
+		z2 = 0.541196100 * tmp10 + z5;      // c2-c6
+		z4 = 1.306562965 * tmp12 + z5;      // c2+c6
+		z3 = 0.707106781 * tmp11;           // c4
 
-		z11 = tmp7 + z3; // phase 5
+		z11 = tmp7 + z3;                    // phase 5
 		z13 = tmp7 - z3;
 
-		dataptr[5] = z13 + z2; // phase 6
+		dataptr[5] = z13 + z2;              // phase 6
 		dataptr[3] = z13 - z2;
 		dataptr[1] = z11 + z4;
 		dataptr[7] = z11 - z4;
 
-		dataptr += 8; // advance pointer to next row
+		dataptr += 8;                       // advance pointer to next row
 	}
 
 	// Pass 2: process columns
 
 	dataptr = datafloat;
-	for (ctr = 7; ctr >= 0; ctr--)
+	for (int i = 7; i >= 0; i--)
 	{
 		tmp0 = dataptr[0] + dataptr[56];
 		tmp7 = dataptr[0] - dataptr[56];
@@ -637,38 +644,38 @@ static void fdct_and_quantization(int8_t *data, float *fdtbl, int16_t *outdata)
 
 		// Even part
 
-		tmp10 = tmp0 + tmp3; // phase 2
+		tmp10 = tmp0 + tmp3;                // phase 2
 		tmp13 = tmp0 - tmp3;
 		tmp11 = tmp1 + tmp2;
 		tmp12 = tmp1 - tmp2;
 
-		dataptr[0] = tmp10 + tmp11; // phase 3
+		dataptr[0] = tmp10 + tmp11;         // phase 3
 		dataptr[32] = tmp10 - tmp11;
 
-		z1 = (tmp12 + tmp13) * ((float)0.707106781); // c4
-		dataptr[16] = tmp13 + z1; // phase 5
+		z1 = 0.707106781 * (tmp12 + tmp13); // c4
+		dataptr[16] = tmp13 + z1;           // phase 5
 		dataptr[48] = tmp13 - z1;
 
 		// Odd part
 
-		tmp10 = tmp4 + tmp5; // phase 2
+		tmp10 = tmp4 + tmp5;                // phase 2
 		tmp11 = tmp5 + tmp6;
 		tmp12 = tmp6 + tmp7;
 
 		// The rotator is modified from fig 4-8 to avoid extra negations.
-		z5 = (tmp10 - tmp12) * ((float)0.382683433);    // c6
-		z2 = ((float)0.541196100) * tmp10 + z5;         // c2-c6
-		z4 = ((float)1.306562965) * tmp12 + z5;         // c2+c6
-		z3 = tmp11 * ((float)0.707106781);              // c4
+		z5 = 0.382683433 * (tmp10 - tmp12); // c6
+		z2 = 0.541196100 * tmp10 + z5;      // c2-c6
+		z4 = 1.306562965 * tmp12 + z5;      // c2+c6
+		z3 = 0.707106781 * tmp11;           // c4
 
-		z11 = tmp7 + z3; // phase 5
+		z11 = tmp7 + z3;                    // phase 5
 		z13 = tmp7 - z3;
-		dataptr[40] = z13 + z2; // phase 6
+		dataptr[40] = z13 + z2;             // phase 6
 		dataptr[24] = z13 - z2;
 		dataptr[8] = z11 + z4;
 		dataptr[56] = z11 - z4;
 
-		dataptr++; // advance pointer to next column
+		dataptr++;                          // advance pointer to next column
 	}
 
 	// Quantize/descale the coefficients, and store into output array
@@ -678,11 +685,11 @@ static void fdct_and_quantization(int8_t *data, float *fdtbl, int16_t *outdata)
 	// quotients, we have to force the dividend positive for portability.
 	// The maximum coefficient size is +-16K (for 12-bit data), so this
 	// code should work for either 16-bit or 32-bit ints.
-	for (i = 0; i < 64; i++)
+	for (int i = 0; i < 64; i++)
 		outdata[i] = (int16_t)((int16_t)(datafloat[i] * fdtbl[i] + 16384.5) - 16384);
 }
 
-static void process_DU(int8_t *ComponentDU, float *fdtbl, int16_t *DC, bitstring *HTDC, bitstring *HTAC)
+static void process_DU(int8_t *ComponentDU, double *fdtbl, int16_t *DC, bitstring *HTDC, bitstring *HTAC)
 {
 	bitstring EOB = HTAC[0x00];
 	bitstring M16zeroes = HTAC[0xF0];
@@ -742,9 +749,9 @@ static void process_DU(int8_t *ComponentDU, float *fdtbl, int16_t *DC, bitstring
 		{
 			for (int nrmarker = 1; nrmarker <= nrzeroes / 16; nrmarker++)
 				writebits(M16zeroes);
-			nrzeroes = nrzeroes % 16;
+			nrzeroes %= 16;
 		}
-		writebits(HTAC[nrzeroes * 16 + category[DU[i]]]);
+		writebits(HTAC[(nrzeroes << 4) + category[DU[i]]]);
 		writebits(bitcode[DU[i]]);
 	}
 	if (end0pos != 63)
@@ -802,19 +809,12 @@ extern void jpeg_encode_data(FILE *file, jpeg_message_t *msg, jpeg_image_t *info
 
 	bitstring fillbits; // filling bitstring for the bit alignment of the EOI marker
 
-
 	Ximage = info->width;
 	Yimage = info->height;
 
-	uint32_t Xdiv8, Ydiv8;
-	if (Ximage % 8 != 0)
-		Xdiv8 = (Ximage / 8) * 8 + 8;
-	else
-		Xdiv8 = Ximage;
-	if (Yimage % 8 != 0)
-		Ydiv8 = (Yimage / 8) * 8 + 8;
-	else
-		Ydiv8 = Yimage;
+	uint32_t Xdiv8 = (Ximage % 8) ? ((Ximage / 8) << 3) + 8 : Ximage;
+	uint32_t Ydiv8 = (Yimage % 8) ? ((Yimage / 8) << 3) + 8 : Yimage;
+
 	// The image we encode shall be filled with the last line and the last column
 	// from the original bitmap, until Ximage and Yimage are divisible by 8
 	// Load BMP image from disk and complete X

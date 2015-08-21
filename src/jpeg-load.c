@@ -85,7 +85,7 @@ typedef struct
 {
 	uint32_t m_hFactor;
 	uint32_t m_vFactor;
-	float *m_qTable;            // Pointer to the quantisation table to use
+	double *m_qTable;            // Pointer to the quantisation table to use
 	stHuffmanTable *m_acTable;
 	stHuffmanTable *m_dcTable;
 	int16_t m_DCT[65];          // DCT coef
@@ -103,7 +103,7 @@ typedef struct
 
 	stComponent m_component_info[COMPONENTS];
 
-	float m_Q_tables[COMPONENTS][64];       // quantization tables
+	double m_Q_tables[COMPONENTS][64];       // quantization tables
 	stHuffmanTable m_HTDC[HUFFMAN_TABLES];  // DC huffman tables
 	stHuffmanTable m_HTAC[HUFFMAN_TABLES];  // AC huffman tables
 
@@ -131,7 +131,7 @@ typedef struct
 
 /**********************************************************************/
 
-static const float pi_by_16 = M_PI / 16.0;
+static const double pi_by_16 = M_PI / 16.0;
 /*
  * TODO optimize this function - an order of magnitude more time
  * is spent in here (according to gprof)
@@ -139,22 +139,22 @@ static const float pi_by_16 = M_PI / 16.0;
 __attribute__((optimize("unroll-loops")))
 static inline int innerIDCT(int x, int y, const int block[8][8])
 {
-	const float X = ((x << 1) + 1.0) * pi_by_16;
-	const float Y = ((y << 1) + 1.0) * pi_by_16;
+	const double X = ((x << 1) + 1.0) * pi_by_16;
+	const double Y = ((y << 1) + 1.0) * pi_by_16;
 
-	float cu = M_SQRT1_2;
-	float cv = M_SQRT1_2;
+	double cu = M_SQRT1_2;
+	double cv = M_SQRT1_2;
 
-	float sum = 0.0;
+	double sum = 0.0;
 	for (int u = 0; u < 8; u++, cu = 1.0)
 	{
 		/* asm ("fcos" : "+t" (cx)); */
-		const float cx = cosf(X * u);
+		const double cx = cos(X * u);
 
 		for (int v = 0; v < 8; v++, cv = 1.0)
 		{
 			/* asm ("fcos" : "+t" (cy)); */
-			const float cy = cosf(Y * v);
+			const double cy = cos(Y * v);
 
 			sum += cu * cv * block[u][v] * cx * cy;
 		}
@@ -193,7 +193,7 @@ static inline int innerIDCT(int x, int y, const int block[8][8])
 static void DecodeSingleBlock(stComponent *comp, uint8_t *outputBuf, int stride)
 {
 	int16_t *inptr = comp->m_DCT;
-	float *quantptr = comp->m_qTable;
+	double *quantptr = comp->m_qTable;
 
 	// Create a temp 8x8, i.e. 64 array for the data
 	int data[64] = { 0x0 };
@@ -268,8 +268,6 @@ static void DecodeSingleBlock(stComponent *comp, uint8_t *outputBuf, int stride)
 
 /**********************************************************************/
 
-
-/**********************************************************************/
 static void BuildHuffmanTable(const uint8_t *bits, stHuffmanTable *HT)
 {
 	// Takes two array of bits, and build the huffman table for size, and code
@@ -346,7 +344,7 @@ static int ParseSOF(stJpegData *jdata, const uint8_t *stream)
 static int ParseDQT(stJpegData *jdata, const uint8_t *stream)
 {
 	int length, qi;
-	float *table;
+	double *table;
 
 	length = BYTE_TO_WORD(stream) - 2;
 	stream += 2; // Skip length
@@ -760,7 +758,6 @@ static void ProcessHuffmanDataUnit(stJpegData *jdata, int indx)
 					nr += count_0; //skip count_0 zeroes
 					if (nr > 63)
 					{
-						/* FIXME why does this happen? huffman decode error */
 						fprintf(stderr, "Fail @ %s:%d\n", __FILE__, __LINE__);
 						exit(-1);
 					}
@@ -786,9 +783,9 @@ static void ProcessHuffmanDataUnit(stJpegData *jdata, int indx)
 
 static void ConvertYCrCbtoRGB(int y, int cb, int cr, int *r, int *g, int *b)
 {
-	*r = byte_limit((int)(y + 1.402f * (cb - 128)), 0);
-	*g = byte_limit((int)(y - 0.34414f * (cr - 128) - 0.71414f * (cb - 128)), 0);
-	*b = byte_limit((int)(y + 1.772f * (cr - 128)), 0);
+	*r = byte_limit((int)(y + 1.402   * (cb - 128)), 0);
+	*g = byte_limit((int)(y - 0.34414 * (cr - 128) - 0.71414 * (cb - 128)), 0);
+	*b = byte_limit((int)(y + 1.772   * (cr - 128)), 0);
 }
 
 /**********************************************************************/
@@ -808,8 +805,8 @@ static void YCrCB_to_RGB24_Block8x8(stJpegData *jdata, int w, int h, int imgx, i
 			int poff = x * 3 + jdata->m_width * 3 * y;
 			uint8_t *pix = &(jdata->m_colourspace[poff]);
 
-			int yoff = x + y * (w * 8);
-			int coff = (int)(x * (1.0f / w)) + (int)(y * (1.0f / h)) * 8;
+			int yoff = x + y * (w << 3);
+			int coff = (int)(x * (1.0 / w)) + ((int)(y * (1.0 / h)) << 3);
 
 			int r, g, b;
 			ConvertYCrCbtoRGB(Y[yoff], Cr[coff], Cb[coff], &r, &g, &b);
@@ -836,8 +833,8 @@ static void DecodeMCU(stJpegData *jdata, int w, int h)
 	for (int y = 0; y < h; y++)
 		for (int x = 0; x < w; x++)
 		{
-			int stride = w * 8;
-			int offset = x * 8 + y * 64 * w;
+			int stride = w << 3;
+			int offset = (x << 3) + (y * w << 6);
 			ProcessHuffmanDataUnit(jdata, cY);
 			DecodeSingleBlock(&jdata->m_component_info[cY], &jdata->m_Y[offset], stride);
 		}
@@ -866,8 +863,8 @@ static int JpegDecode(stJpegData *jdata)
 	{
 		int h = jdata->m_height * 3;
 		int w = jdata->m_width * 3;
-		int height = h + (8 * hFactor) - (h % (8 * hFactor));
-		int width = w + (8 * vFactor) - (w % (8 * vFactor));
+		int height = h + (hFactor << 3) - (h % (hFactor << 3));
+		int width = w + (vFactor << 3) - (w % (vFactor << 3));
 		jdata->m_rgb = calloc(width * height, sizeof (uint8_t));
 	}
 
@@ -876,8 +873,8 @@ static int JpegDecode(stJpegData *jdata)
 	jdata->m_component_info[2].m_previousDC = 0;
 	jdata->m_component_info[3].m_previousDC = 0;
 
-	int xstride_by_mcu = 8 * hFactor;
-	int ystride_by_mcu = 8 * vFactor;
+	int xstride_by_mcu = hFactor << 3;
+	int ystride_by_mcu = vFactor << 3;
 
 	// Just the decode the image by 'macroblock' (size is 8x8, 8x16, or 16x16)
 	for (int y = 0; y < (int)jdata->m_height; y += ystride_by_mcu)
