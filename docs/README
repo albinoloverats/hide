@@ -32,7 +32,16 @@ There are three possible usages of hide:
 The first will hide the document in the first image and produce an
 output image which contains the hidden data. The second will retrieve,
 and place into the output file, a previously hidden file. And finally,
-the third will show the images capacity for hiding a file.
+the third will show the images capacity for hiding a file in the given
+image.
+
+You can also use the script:
+
+./truly-hide <image> <file>
+
+which will first encrypt the file (using encrypt, of course) and then
+hide it. Using this script there is no metadata leakage about what may,
+or may not, be hidden in a particular image.
 
 Known Issues
 ------------
