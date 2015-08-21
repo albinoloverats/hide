@@ -362,7 +362,7 @@ int main(int argc, char **argv)
 			image_info.free(image_info);
 			errno = EXIT_SUCCESS;
 		}
-#ifndef __DEBUG_DEBUG__
+#ifndef __DEBUG_JPEG__
 		dlclose(so);
 #endif
 		return errno;
