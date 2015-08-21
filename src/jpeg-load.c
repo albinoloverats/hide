@@ -139,8 +139,8 @@ static const float pi_by_16 = M_PI / 16.0;
 static inline int innerIDCT(int x, int y, const int block[8][8])
 {
 	/* these are not subsequently changed */
-	const int X = (x * 2 + 1) * pi_by_16;
-	const int Y = (y * 2 + 1) * pi_by_16;
+	const float X = (x * 2 + 1) * pi_by_16;
+	const float Y = (y * 2 + 1) * pi_by_16;
 
 	float sum = 0.0;
 	for (int u = 0; u < 8; u++)
