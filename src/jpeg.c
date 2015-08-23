@@ -151,8 +151,8 @@ static uint64_t info_jpeg(image_info_t *image_info)
 extern uint64_t info_jpeg(image_info_t *image_info)
 #endif
 {
-	bool t = true;
-	image_info->extra = &t;
+	data_info_t extra = { NULL, 0, true, false };
+	image_info->extra = &extra;
 	read_jpeg(image_info, NULL);
 	return HIDE_CAPACITY;
 }
