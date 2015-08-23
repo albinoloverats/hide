@@ -142,20 +142,21 @@ static inline int innerIDCT(int x, int y, const int block[8][8])
 	const double X = ((x << 1) + 1) * PI_BY_16;
 	const double Y = ((y << 1) + 1) * PI_BY_16;
 
-	double cu = M_SQRT1_2;
-	double cv = M_SQRT1_2;
-
 	double sum = 0.0;
-	for (int u = 0; u < 8; u++, cu = 1.0)
+	for (int u = 0; u < 8; u++)
 	{
-		const double cx = cos(X * u);
-		for (int v = 0; v < 8; v++, cv = 1.0)
+		const double cosxu = cos(X * u);
+		for (int v = 0; v < 8; v++)
 		{
-			const double cy = cos(Y * v);
-			sum += cu * cv * block[u][v] * cx * cy;
+			const double cosyv = cos(Y * v);
+			sum += (u ? 1 : M_SQRT1_2) \
+			     * (v ? 1 : M_SQRT1_2) \
+			     *  block[u][v]        \
+			     *  cosxu              \
+			     *  cosyv;
 		}
 	}
-	return (int)(sum / 4.0);
+	return (int)(sum / 4);
 }
 
 #define PerformIDCT(outBlock, inBlock)                                  \
