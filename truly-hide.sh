@@ -28,7 +28,7 @@ then
 	ext=${out##*.}
 	out=${out%.*}
 
-	./hide -f $image $tmp $out-2.$ext
+	./hide -f $image $tmp $out-steg.$ext
 else
 	./hide -f $image $tmp
 	decrypt --nogui --raw $tmp .
