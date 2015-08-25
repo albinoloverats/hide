@@ -10,7 +10,7 @@ SHARED   = -fPIC -shared -Wl,-soname,
 
 DEBUG    = -D__DEBUG__ -O0 -g3 -ggdb
 
-all: hide jpeg png tiff webp
+all: hide bmp jpeg png tiff webp
 
 hide:
 	 @$(CC) $(CFLAGS) $(CPPFLAGS) $(LIBS) $(SOURCE) -o hide
@@ -19,6 +19,10 @@ hide:
 #hide-gui:
 #	 @$(CC) $(CFLAGS) $(CPPFLAGS) $(LIBS) $(SOURCE) src/gui-gtk.c -o hide
 #	-@echo "built ‘$(SOURCE) src/gui-gtk.c’ → ‘hide’"
+
+bmp:
+	 @$(CC) -o hide-bmp.so $(CFLAGS) $(CPPFLAGS) $(SHARED)hide-bmp.so src/bmp.c
+	-@echo "built ‘bmp.c’ → ‘hide-bmp.so’"
 
 jpeg:
 	 @$(CC) -o hide-jpeg.so $(CFLAGS) $(CPPFLAGS) -lm $(SHARED)hide-jpeg.so src/jpeg.c src/jpeg-load.c src/jpeg-save.c
@@ -36,7 +40,7 @@ webp:
 	 @$(CC) -o hide-webp.so $(CFLAGS) $(CPPFLAGS) $(SHARED)hide-webp.so -lwebp src/webp.c
 	-@echo "built ‘webp.c’ → ‘hide-webp.so’"
 
-debug: debug-hide debug-jpeg debug-png debug-tiff debug-webp
+debug: debug-hide debug-bmp debug-jpeg debug-png debug-tiff debug-webp
 
 debug-hide:
 	 @$(CC) $(CFLAGS) $(CPPFLAGS) $(LIBS) $(SOURCE) $(DEBUG) -o hide
@@ -49,6 +53,10 @@ debug-profile-jpeg:
 #debug-hide-gui:
 #	 @$(CC) $(CFLAGS) $(CPPFLAGS) $(LIBS) $(SOURCE) src/gui-gtk.c $(DEBUG) -o hide
 #	-@echo "built ‘$(SOURCE) src/gui-gtk.c’ → ‘hide’"
+
+debug-bmp:
+	  @$(CC) -o hide-bmp.so $(CFLAGS) $(CPPFLAGS) $(DEBUG) $(SHARED)hide-bmp.so src/bmp.c
+	-@echo "built ‘bmp.c’ → ‘hide-bmp.so’"
 
 debug-jpeg:
 	 @$(CC) -o hide-jpeg.so $(CFLAGS) $(CPPFLAGS) -lm $(DEBUG) $(SHARED)hide-jpeg.so src/jpeg.c src/jpeg-load.c src/jpeg-save.c
