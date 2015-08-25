@@ -136,7 +136,7 @@ typedef struct
 /*
  * This is the biggest bottleneck when decoding an image.
  */
-#ifndef __FreeBSD__
+#if !defined __FreeBSD__ && !defined __APPLE__
 __attribute__((optimize("unroll-loops")))
 #endif
 static inline int innerIDCT(int x, int y, const int block[8][8])
