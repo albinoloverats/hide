@@ -78,4 +78,4 @@ clean:
 	 @rm -fv hide
 
 distclean: clean
-	 @rm -fv hide-jpeg.so hide-png.so hide-tiff.so hide-webp.so
+	 @rm -fv hide-bmp.so hide-jpeg.so hide-png.so hide-tiff.so hide-webp.so

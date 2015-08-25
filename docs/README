@@ -7,9 +7,9 @@ About
 Warning: hide is currently in the beta stages of development!
 
 hide is a steganographic tool for hiding data in, and retrieving data
-from, images; this is all it does. It (currently) supports JPEG, PNG,
-TIFF and Webp images, though might support other image formats in the
-future.
+from, images; this is all it does. It (currently) supports BMP, JPEG,
+PNG, TIFF and Webp images, though might support other image formats in
+the future.
 
 A list of things the hide isn't:
 

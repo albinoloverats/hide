@@ -47,8 +47,13 @@ bmp_extra_t;
  * and then into the correct order for this machine
  */
 
-#define from_little_endian_16(s) ntohs(__bswap_16(s))
-#define from_little_endian_32(i) ntohl(__bswap_32(i))
+#if defined __FreeBSD__
+	#define from_little_endian_16(s) ntohs(__bswap16(s))
+	#define from_little_endian_32(i) ntohl(__bswap32(i))
+#else
+	#define from_little_endian_16(s) ntohs(__bswap_16(s))
+	#define from_little_endian_32(i) ntohl(__bswap_32(i))
+#endif
 
 static bool is_bmp(char *file_name)
 {
