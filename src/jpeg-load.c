@@ -136,7 +136,9 @@ typedef struct
 /*
  * This is the biggest bottleneck when decoding an image.
  */
+#ifndef __FreeBSD__
 __attribute__((optimize("unroll-loops")))
+#endif
 static inline int innerIDCT(int x, int y, const int block[8][8])
 {
 	const double X = ((x << 1) + 1) * PI_BY_16;
