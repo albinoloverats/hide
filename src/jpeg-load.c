@@ -342,15 +342,12 @@ static int ParseSOF(stJpegData *jdata, const uint8_t *stream)
 
 static int ParseDQT(stJpegData *jdata, const uint8_t *stream)
 {
-	int length, qi;
-	double *table;
-
-	length = BYTE_TO_WORD(stream) - 2;
+	int length = BYTE_TO_WORD(stream) - 2;
 	stream += 2; // Skip length
 
 	while (length > 0)
 	{
-		qi = *stream++;
+		int qi = *stream++;
 
 		int qprecision = qi >> 4; // upper 4 bits specify the precision
 		int qindex = qi & 0xf; // index is lower 4 bits
@@ -370,11 +367,9 @@ static int ParseDQT(stJpegData *jdata, const uint8_t *stream)
 		}
 
 		// The quantization table is the next 64 bytes
-		table = jdata->m_Q_tables[qindex];
-
 		// the quantization tables are stored in zigzag format, so we
 		// use this functino to read them all in and de-zig zag them
-		BuildQuantizationTable(table, stream);
+		BuildQuantizationTable(jdata->m_Q_tables[qindex], stream);
 		stream += 64;
 		length -= 65;
 	}
@@ -444,20 +439,18 @@ static int ParseDHT(stJpegData *jdata, const uint8_t *stream)
 	 * array of u8 elements, in order of depth
 	 */
 
-	uint32_t count, i;
 	uint8_t huff_bits[17];
-	int length, index;
 
-	length = BYTE_TO_WORD(stream) - 2;
+	int length = BYTE_TO_WORD(stream) - 2;
 	stream += 2; // Skip length
 
 	while (length > 0)
 	{
-		index = *stream++;
+		int index = *stream++;
 		// We need to calculate the number of bytes 'vals' will takes
 		huff_bits[0] = 0;
-		count = 0;
-		for (i = 1; i < 17; i++)
+		int count = 0;
+		for (int i = 1; i < 17; i++)
 		{
 			huff_bits[i] = *stream++;
 			count += huff_bits[i];
@@ -475,14 +468,14 @@ static int ParseDHT(stJpegData *jdata, const uint8_t *stream)
 		if (index & 0xf0)
 		{
 			uint8_t *huffval = jdata->m_HTAC[index & 0xf].m_hufVal;
-			for (i = 0; i < count; i++)
+			for (int i = 0; i < count; i++)
 				huffval[i] = *stream++;
 			BuildHuffmanTable(huff_bits, &jdata->m_HTAC[index & 0xf]); // AC
 		}
 		else
 		{
 			uint8_t *huffval = jdata->m_HTDC[index & 0xf].m_hufVal;
-			for (i = 0; i < count; i++)
+			for (int i = 0; i < count; i++)
 				huffval[i] = *stream++;
 			BuildHuffmanTable(huff_bits, &jdata->m_HTDC[index & 0xf]); // DC
 		}
@@ -625,7 +618,7 @@ static inline int16_t GetNBits(const uint8_t **stream, int nbits_wanted)
 static inline int LookNBits(const uint8_t **stream, int nbits_wanted)
 {
 	FillNBits(stream, nbits_wanted);
-	return g_reservoir >> (g_nbits_in_reservoir - nbits_wanted));
+	return g_reservoir >> (g_nbits_in_reservoir - nbits_wanted);
 }
 
 #define SkipNBits(stream, nbits_wanted)                                 \
