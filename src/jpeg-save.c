@@ -747,7 +747,7 @@ static void process_DU(int8_t *ComponentDU, double *fdtbl, int16_t *DC, bitstrin
 		int nrzeroes = i - startpos;
 		if (nrzeroes >= 16)
 		{
-			for (int nrmarker = 1; nrmarker <= nrzeroes / 16; nrmarker++)
+			for (int nrmarker = 1; nrmarker <= (nrzeroes >> 4); nrmarker++)
 				writebits(M16zeroes);
 			nrzeroes %= 16;
 		}

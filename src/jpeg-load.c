@@ -132,7 +132,7 @@ typedef struct
 
 /**********************************************************************/
 
-#define PI_BY_16 0.19634954084936207740391521145497
+#define PI_BY_16 0.19634954084936207740391521145496893025
 /*
  * This is the biggest bottleneck when decoding an image.
  */
@@ -158,7 +158,7 @@ static inline int innerIDCT(int x, int y, const int block[8][8])
 			     *  cosyv;
 		}
 	}
-	return (int)(sum / 4);
+	return (int)sum >> 2;
 }
 
 #define PerformIDCT(outBlock, inBlock)                                  \
@@ -617,7 +617,7 @@ static uint32_t g_nbits_in_reservoir = 0;
 static inline int16_t GetNBits(const uint8_t **stream, int nbits_wanted)
 {
 	FillNBits(stream, nbits_wanted);
-	int16_t result = g_reservoir >> (g_nbits_in_reservoir - (nbits_wanted));
+	int16_t result = g_reservoir >> (g_nbits_in_reservoir - nbits_wanted);
 	shift_bits(nbits_wanted);
 	return result;
 }
@@ -625,7 +625,7 @@ static inline int16_t GetNBits(const uint8_t **stream, int nbits_wanted)
 static inline int LookNBits(const uint8_t **stream, int nbits_wanted)
 {
 	FillNBits(stream, nbits_wanted);
-	return g_reservoir >> (g_nbits_in_reservoir - (nbits_wanted));
+	return g_reservoir >> (g_nbits_in_reservoir - nbits_wanted));
 }
 
 #define SkipNBits(stream, nbits_wanted)                                 \
@@ -832,10 +832,8 @@ static void DecodeMCU(stJpegData *jdata, int w, int h)
 	for (int y = 0; y < h; y++)
 		for (int x = 0; x < w; x++)
 		{
-			int stride = w << 3;
-			int offset = (x << 3) + (y * w << 6);
 			ProcessHuffmanDataUnit(jdata, cY);
-			DecodeSingleBlock(&jdata->m_component_info[cY], &jdata->m_Y[offset], stride);
+			DecodeSingleBlock(&jdata->m_component_info[cY], &jdata->m_Y[(x << 3) + (y * w << 6)], w << 3);
 		}
 
 	// Cb
