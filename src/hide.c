@@ -387,17 +387,16 @@ int main(int argc, char **argv)
 	 *
 	 * remember that process() will have to set the status once it's finished
 	 */
-	pthread_t *t = calloc(1, sizeof( pthread_t ));
+	pthread_t t;
 	pthread_attr_t a;
 	pthread_attr_init(&a);
 	pthread_attr_setdetachstate(&a, PTHREAD_CREATE_JOINABLE);
-	pthread_create(t, &a, process, &options);
+	pthread_create(&t, &a, process, &options);
 	pthread_attr_destroy(&a);
 
 	cli_display(&ui);
 
-	pthread_join(*t, NULL);
-	free(t);
+	pthread_join(t, NULL);
 #else
 	process(&options);
 #endif
