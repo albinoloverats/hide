@@ -119,16 +119,18 @@ typedef struct
 
 /**********************************************************************/
 
-#define GenHuffCodes(num_codes, arr, huffVal)                           \
-{                                                                       \
-	for (int cc = 0, hc = 0, lc = 1; cc < num_codes; cc++, hc++)    \
+#define GenHuffCodes(nc, arr, huffVal)                                  \
+	do                                                              \
 	{                                                               \
-		for (; arr[cc].length > lc; lc++)                       \
-			hc = hc << 1;                                   \
-		arr[cc].code = hc;                                      \
-		arr[cc].value = huffVal[cc];                            \
+		for (int cc = 0, hc = 0, lc = 1; cc < nc; cc++, hc++)   \
+		{                                                       \
+			for (; arr[cc].length > lc; lc++)               \
+				hc = hc << 1;                           \
+			arr[cc].code = hc;                              \
+			arr[cc].value = huffVal[cc];                    \
+		}                                                       \
 	}                                                               \
-}
+	while (0)
 
 /**********************************************************************/
 
@@ -162,30 +164,22 @@ static inline int innerIDCT(int x, int y, const int block[8][8])
 }
 
 #define PerformIDCT(outBlock, inBlock)                                  \
-{                                                                       \
 	for (int y = 0; y < 8; y++)                                     \
 		for (int x = 0; x < 8; x++)                             \
-			outBlock[x][y] = innerIDCT(x, y, (const int (*)[8])inBlock); \
-}
+			outBlock[x][y] = innerIDCT(x, y, (const int (*)[8])inBlock)
 
 #define DequantizeBlock(block, quantBlock)                              \
-{                                                                       \
 	for (int c = 0; c < 64; c++)                                    \
-		block[c] = (int)(block[c] * quantBlock[c]);             \
-}
+		block[c] = (int)(block[c] * quantBlock[c])
 
 #define DeZigZag(outBlock, inBlock)                                     \
-{                                                                       \
 	for (int i = 0; i < 64; i++)                                    \
-		outBlock[i] = inBlock[ZigZagArray[i]];                  \
-}
+		outBlock[i] = inBlock[ZigZagArray[i]]
 
 #define TransformArray(outArray, inArray)                               \
-{                                                                       \
 	for (int y = 0, cc = 0; y < 8; y++)                             \
 		for (int x = 0; x < 8; x++, cc++)                       \
-			outArray[x][y] = inArray[cc];                   \
-}
+			outArray[x][y] = inArray[cc]
 
 /***************************************************************************/
 
@@ -332,11 +326,11 @@ static int ParseSOF(stJpegData *jdata, const uint8_t *stream)
 /**********************************************************************/
 
 #define BuildQuantizationTable(qtable, ref_table)                       \
-{                                                                       \
-	for (int i = 0, c = 0; i < 8; i++)                              \
-		for (int j = 0; j < 8; j++, c++)                        \
-			qtable[c] = ref_table[c];                       \
-}
+	do                                                              \
+		for (int i = 0, c = 0; i < 8; i++)                      \
+			for (int j = 0; j < 8; j++, c++)                \
+				qtable[c] = ref_table[c];               \
+	while (0)
 
 /**********************************************************************/
 
@@ -589,23 +583,27 @@ static uint32_t g_reservoir = 0;
 static uint32_t g_nbits_in_reservoir = 0;
 
 #define FillNBits(stream, nbits_wanted)                                 \
-{                                                                       \
-	while (g_nbits_in_reservoir < (unsigned)nbits_wanted)           \
+	do                                                              \
 	{                                                               \
-		uint8_t c = *(*stream)++;                               \
-		g_reservoir <<= 8;                                      \
-		if (c == 0xff && **stream == 0x00)                      \
-			(*stream)++;                                    \
-		g_reservoir |= c;                                       \
-		g_nbits_in_reservoir += 8;                              \
+		while (g_nbits_in_reservoir < (unsigned)nbits_wanted)   \
+		{                                                       \
+			uint8_t c = *(*stream)++;                       \
+			g_reservoir <<= 8;                              \
+			if (c == 0xff && **stream == 0x00)              \
+				(*stream)++;                            \
+			g_reservoir |= c;                               \
+			g_nbits_in_reservoir += 8;                      \
+		}                                                       \
 	}                                                               \
-}
+	while (0)
 
 #define shift_bits(nbits_wanted)                                        \
-{                                                                       \
-	g_nbits_in_reservoir -= nbits_wanted;                           \
-	g_reservoir &= (1U << g_nbits_in_reservoir) - 1;                \
-}
+	do                                                              \
+	{                                                               \
+		g_nbits_in_reservoir -= nbits_wanted;                   \
+		g_reservoir &= (1U << g_nbits_in_reservoir) - 1;        \
+	}                                                               \
+	while (0)
 
 static inline int16_t GetNBits(const uint8_t **stream, int nbits_wanted)
 {
@@ -622,10 +620,12 @@ static inline int LookNBits(const uint8_t **stream, int nbits_wanted)
 }
 
 #define SkipNBits(stream, nbits_wanted)                                 \
-{                                                                       \
-	FillNBits(stream, nbits_wanted);                                \
-	shift_bits(nbits_wanted);                                       \
-}
+	do                                                              \
+	{                                                               \
+		FillNBits(stream, nbits_wanted);                        \
+		shift_bits(nbits_wanted);                               \
+	}                                                               \
+	while (0)
 
 /**********************************************************************/
 
@@ -642,7 +642,7 @@ static bool IsInHuffmanCodes(int code, int numCodeBits, int numBlocks, stBlock *
 
 /**********************************************************************/
 
-#define DetermineSign(val, nBits) ((val < (1 << (nBits - 1))) ? val + (-1 << nBits) + 1 : val)
+#define DetermineSign(val, nBits) ((val < (1 << (nBits - 1))) ? (signed)(val + (UINT64_MAX << nBits) + 1) : val)
 
 static void ProcessHuffmanDataUnit(stJpegData *jdata, int indx)
 {
@@ -699,7 +699,7 @@ static void ProcessHuffmanDataUnit(stJpegData *jdata, int indx)
 					}
 
 				int16_t data = GetNBits(&jdata->m_stream, numDataBits);
-				data = DetermineSign(data, numDataBits);
+				data = (int16_t)DetermineSign(data, numDataBits);
 				DCT_tcoeff[0] = data + c->m_previousDC;
 				c->m_previousDC = DCT_tcoeff[0];
 			}
@@ -755,7 +755,7 @@ static void ProcessHuffmanDataUnit(stJpegData *jdata, int indx)
 					}
 
 					int16_t data = GetNBits(&jdata->m_stream, size_val);
-					data = DetermineSign(data, size_val);
+					data = (int16_t)DetermineSign(data, size_val);
 					DCT_tcoeff[nr++] = data;
 				}
 				break;

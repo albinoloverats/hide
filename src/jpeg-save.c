@@ -348,10 +348,8 @@ static void write_DQTinfo(void)
 
 // Set quantization table and zigzag reorder it
 #define set_quant_table(basic_table, scale_factor, newtable)            \
-{                                                                       \
 	for (int i = 0; i < 64; i++)                                    \
-		newtable[zigzag[i]] = byte_limit((basic_table[i] * scale_factor + 50) / 100, 1);\
-}
+		newtable[zigzag[i]] = byte_limit((basic_table[i] * scale_factor + 50) / 100, 1)
 
 static void set_DQTinfo(void)
 {
@@ -461,14 +459,14 @@ static void writebits(bitstring bs)
 }
 
 #define compute_Huffman_table(nrcodes, std_table, HT)                   \
-{                                                                       \
-	for (int i = 1, c = 0, p = 0; i <= 16; i++, c *= 2)             \
-		for (int j = 1; j <= nrcodes[i]; j++, p++, c++)         \
-		{                                                       \
-			HT[std_table[p]].value = c;                     \
-			HT[std_table[p]].length = i;                    \
-		}                                                       \
-}
+	do                                                              \
+		for (int i = 1, c = 0, p = 0; i <= 16; i++, c *= 2)     \
+			for (int j = 1; j <= nrcodes[i]; j++, p++, c++) \
+			{                                               \
+				HT[std_table[p]].value = c;             \
+				HT[std_table[p]].length = i;            \
+			}                                               \
+	while (0)
 
 static void init_Huffman_tables(void)
 {
