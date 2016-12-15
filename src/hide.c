@@ -46,12 +46,8 @@
 	#include "gui-gtk.h"
 #endif
 
-
-#ifndef __DEBUG__
-	#define LIB_DIR "/usr/lib/"
-#else
-	#define LIB_DIR "./"
-#endif
+#define DIR_LIBRARY "/usr/lib/"
+#define DIR_LOCAL "./"
 
 #undef HIDE_CAPACITY /* here image_info isn't a pointer but a local variable */
 #define HIDE_CAPACITY (image_info.width * image_info.height - sizeof (uint64_t))
@@ -159,38 +155,38 @@ static int selector(const struct dirent *d)
 	return !strncmp("hide-", d->d_name, 5);
 }
 
-static void *find_supported_formats(image_info_t *image_info)
+static void *find_supported_formats(char *path, image_info_t *image_info)
 {
 	void *so = NULL;
 	struct dirent **eps;
-	int n = scandir(LIB_DIR, &eps, selector, NULL);
+	int n = scandir(path, &eps, selector, NULL);
 	char buffer[80] = "Supported image formats: ";
 	if (n == 0)
 	{
+		if (strcmp(path, DIR_LOCAL))
+			return find_supported_formats(DIR_LOCAL, image_info);
 		fprintf(stderr, "Could not find any hide image libraries!\n");
 		return NULL;
 	}
 	for (int i = 0; i < n; ++i)
 	{
-#ifndef __DEBUG__
-		char *l = eps[i]->d_name;
-#else
-		char l[1024];
-		snprintf(l, sizeof l, "%s%s", LIB_DIR, eps[i]->d_name);
-#endif
-		if ((so = dlopen(l, RTLD_LAZY)) == NULL)
+		char *l = NULL;
+		if (strcmp(path, DIR_LOCAL))
+			l = eps[i]->d_name;
+		else
+			asprintf(&l, "%s%s", path, eps[i]->d_name);
+		so = dlopen(l, RTLD_LAZY);
+		if (!strcmp(path, DIR_LOCAL))
+			free(l);
+		if (so == NULL)
 		{
-#ifdef __DEBUG__
 			fprintf(stderr, "%s\n", dlerror());
-#endif
 			continue;
 		}
 		image_type_t *(*init)();
 		if (!(init = dlsym(so, "init")))
 		{
-#ifdef __DEBUG__
 			fprintf(stderr, "%s\n", dlerror());
-#endif
 			dlclose(so);
 			continue;
 		}
@@ -214,6 +210,7 @@ static void *find_supported_formats(image_info_t *image_info)
 			break;
 		}
 		dlclose(so);
+		so = NULL;
 	}
 	if (!image_info && strlen(buffer))
 		fprintf(stderr, "%s\n", buffer);
@@ -246,14 +243,14 @@ extern void *process(void *args)
 	image_info_t image_info = { files.image_in, NULL, NULL, NULL, NULL, 0, 0, 0, NULL, NULL };
 	data_info_t data_info = { files.data_file, 0, false, options->fill };
 
-	void *so = find_supported_formats(&image_info);
+	void *so = find_supported_formats(DIR_LIBRARY, &image_info);
 	if (!so)
 		pthread_exit(&errno);
 
 	if (!(image_info.read && image_info.write))
 	{
 		fprintf(stderr, "Unsupported image format\n");
-		find_supported_formats(NULL);
+		find_supported_formats(DIR_LIBRARY, NULL);
 		errno = EFTYPE;
 		goto done;
 	}
@@ -333,14 +330,20 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Usage: %s [-f] <source image> <file to hide> <output image>\n", argv[0]);
 		fprintf(stderr, "       %s [-f] <image> <recovered file>\n", argv[0]);
 		fprintf(stderr, "       %s <image>\n", argv[0]);
-		find_supported_formats(NULL);
+		find_supported_formats(DIR_LIBRARY, NULL);
 		return EXIT_FAILURE;
 	}
 	else if (argc == 2)
 	{
+		struct stat s;
+		if (stat(argv[1], &s) < 0 && errno == ENOENT)
+		{
+			fprintf(stderr, "Could not read file %s\n", argv[1]);
+			return errno;
+		}
 		image_info_t image_info = { argv[1], NULL, NULL, NULL, NULL, 0, 0, 0, NULL, NULL };
 #ifndef __DEBUG_JPEG__
-		void *so = find_supported_formats(&image_info);
+		void *so = find_supported_formats(DIR_LIBRARY, &image_info);
 		if (!so)
 			return errno;
 #else
@@ -352,7 +355,7 @@ int main(int argc, char **argv)
 		if (!image_info.info)
 		{
 			fprintf(stderr, "Unsupported image format\n");
-			find_supported_formats(NULL);
+			find_supported_formats(DIR_LIBRARY, NULL);
 			errno = EFTYPE;
 		}
 		else

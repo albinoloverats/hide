@@ -22,7 +22,7 @@ image=$1
 if test $# -eq 2
 then
 	file=$2
-	encrypt --nogui --raw $2 $tmp
+	encrypt --nogui --raw $file $tmp
 
 	out=$(basename $image)
 	ext=${out##*.}

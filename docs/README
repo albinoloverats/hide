@@ -1,6 +1,9 @@
 hide
 ====
 
+hide is a steganographic tool for hiding data in, and retrieving data
+from, images.
+
 About
 -----
 
@@ -18,7 +21,7 @@ A list of things the hide isn't:
 
 If you need either of these things doing (which you really should -
 don't use just one layer of security but many complimentary layers)
-then checkout encrypt as it does both of those things.
+then checkout [encrypt][] as it does both of those things.
 
 Usage
 -----
@@ -37,11 +40,14 @@ image.
 
 You can also use the script:
 
-./truly-hide <image> <file>
+./truly-hide <image> [file]
 
-which will first encrypt the file (using encrypt, of course) and then
+This will first encrypt the file (using encrypt, of course) and then
 hide it. Using this script there is no metadata leakage about what may,
-or may not, be hidden in a particular image.
+or may not, be hidden in a particular image, as it uses the advanced
+functionality of encrypt of not creating a recognizable container. Omit
+[file] to recover a previously encrypted and hidden file (it will be
+extracted to the current directory).
 
 Known Issues
 ------------
@@ -50,3 +56,6 @@ Known Issues
   - WebP library doesn't compile
     - Missing definition for lossless image encoding (Debian)
     - Missing entire header for encoding (Slackware)
+
+
+[encrypt]: https://albinoloverats.net/projects/encrypt
