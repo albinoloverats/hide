@@ -4,6 +4,7 @@ hide
 hide is a steganographic tool for hiding data in, and retrieving data
 from, images.
 
+
 About
 -----
 
@@ -12,7 +13,9 @@ Warning: hide is currently in the beta stages of development!
 hide is a steganographic tool for hiding data in, and retrieving data
 from, images; this is all it does. It (currently) supports BMP, JPEG,
 PNG, TIFF and Webp images, though might support other image formats in
-the future.
+the future. With the exception of JPEG's, the image with the hidden data
+will be a 32-bit pre pixel image; 3 × 8-bits per RGB and a further
+8-bits for transparency.
 
 A list of things the hide isn't:
 
@@ -22,6 +25,7 @@ A list of things the hide isn't:
 If you need either of these things doing (which you really should -
 don't use just one layer of security but many complimentary layers)
 then checkout [encrypt][] as it does both of those things.
+
 
 Usage
 -----
@@ -48,6 +52,42 @@ or may not, be hidden in a particular image, as it uses the advanced
 functionality of encrypt of not creating a recognizable container. Omit
 [file] to recover a previously encrypted and hidden file (it will be
 extracted to the current directory).
+
+
+Image Formats
+-------------
+
+Different image formats will provide different capabilities when hiding
+data. More often than not the resultant image will have a greater file
+size than the original, sometimes by an order of magnitude.
+
+Uncompressed BMP images are (currently) the only image format where the
+file size does not change. PNG and TIFF images often have larger file
+sizes with hidden data but this isn't always the case. JPEG's have the
+smallest capacity of all the currently supported formats because of how
+the hidden data is stored, and can often increase the file size
+dramatically. Webp images can suffer from massive file size increases
+especially if the original was lossy, otherwise can be as capable as PNG
+and TIFF.
+
+
+Sample Images
+-------------
+
+The sample images provide an example to demonstrate what could be
+considered a worse case scenario. Each image with hidden data is filled
+to capacity with random data, plain text, or a single byte of hidden
+data.
+
+Image  |                         File Size                     |          Ratio
+Format | Original Image |   Random   |    Text    |  1 Byte    | Random | Text  | 1 Byte
+-------+----------------+------------+------------+------------+--------+-------+--------
+BMP    |      3,978,218 |  3,978,218 |  3,978,218 |  3,978,218 |   100% | 100%  |   100%
+JPEG   |        386,716 |  1,136,084 |  1,136,099 |  1,135,270 |   294% | 294%  |   294%
+PNG    |      1,823,156 |  2,248,197 |  2,137,849 |  1,814,704 |   123% | 117%  |    99%
+TIFF   |      1,955,268 |  4,154,698 |  3,393,644 |  3,779,120 |   212% | 174%  |   193%
+Webp   |      1,478,702 |  2,125,684 |  1,800,902 |  1,473,176 |   144% | 122%  |    99%
+
 
 Known Issues
 ------------
