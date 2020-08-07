@@ -91,6 +91,7 @@ static int read_png(image_info_t *image_info, void (*progress_update)(uint64_t, 
 			image_info->bpp = 4;
 			break;
 		default:
+			errno = ENOTSUP;
 			goto cleanup;
 	}
 
