@@ -1,5 +1,5 @@
 /*
- * Copyright © 2005-2020, albinoloverats ~ Software Development
+ * Copyright © 2005-2022, albinoloverats ~ Software Development
  * email: webmaster@albinoloverats.net
  *
  * This program is free software: you can redistribute it and/or modify
@@ -23,7 +23,7 @@
 /*!
  * \file    common.h
  * \author  albinoloverats ~ Software Development
- * \date    2009-2020
+ * \date    2009-2022
  * \brief   Mostly common macros, useful when dealing with different OS’s
  *
  * Various macros which help with the transition from one OS to another.
@@ -48,8 +48,8 @@
 	#define F_WRLCK NOTSET /*!< Set value to NOTSET */
 #endif
 
-#if !defined __bswap_64 && !defined __sun
-	#define __bswap_64(x) /*!< Define ourselves an 8-byte swap */   \
+#if !defined __bswap_constant_64 && !defined __sun
+	#define __bswap_constant_64(x) /*!< Define ourselves an 8-byte swap */   \
 		( (((x) & 0xff00000000000000ull) >> 56)                 \
 		| (((x) & 0x00ff000000000000ull) >> 40)                 \
 		| (((x) & 0x0000ff0000000000ull) >> 24)                 \
@@ -62,8 +62,8 @@
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN || BYTE_ORDER == LITTLE_ENDIAN || _WIN32
 	#if !defined __APPLE__ && !defined __sun
-		#define ntohll(x) __bswap_64(x) /*!< Do need to swap bytes from network byte order */
-		#define htonll(x) __bswap_64(x) /*!< Do need to swap bytes to network byte order */
+		#define ntohll(x) __bswap_constant_64(x) /*!< Do need to swap bytes from network byte order */
+		#define htonll(x) __bswap_constant_64(x) /*!< Do need to swap bytes to network byte order */
 	#endif
 #elif __BYTE_ORDER == __BIG_ENDIAN || BYTE_ORDER == BIG_ENDIAN
 	#define ntohll(x) (x) /*!< No need to swap bytes from network byte order */
@@ -72,17 +72,26 @@
 	#error "Unknown endianness!"
 #endif
 
+#ifndef BUILD_OS
+	#define BUILD_OS "(unknown)"
+#endif
+
 #if defined(__clang__)
 	#define COMPILER "clang " __VERSION__
 #elif defined(__GNUC__)
 	#define COMPILER "gcc " __VERSION__
 #else
 	#ifdef __VERSION__
-		#define COMPILER "other" __VERSION__
+		#define COMPILER "(unknown) " __VERSION__
 	#else
-		#define COMPILER "other unknown"
+		#define COMPILER "(unknown) (unknown)"
 	#endif
 #endif
+
+#ifndef GIT_COMMIT
+	#define GIT_COMMIT "(unknown)"
+#endif
+#define GIT_COMMIT_LENGTH 7
 
 //#if !defined _WIN32 && !defined __CYGWIN__ && !defined __APPLE__
 //    #define _(s) gettext(s) /*!< Allow use of _() to refer to gettext() */
@@ -108,15 +117,23 @@
 
 #define PERCENT 100.0f /*!< Floating point 100% */
 
-#define THOUSAND                   1000 /*!< Integer value for 1 thousand */
-#define MILLION                 1000000 /*!< Integer value for 1 million (ideal for timing related things) */
-#define THOUSAND_MILLION     1000000000 /*!< Integer value for 1000 million */
-#define BILLION           1000000000000 /*!< Integer value for 1 billion (ideal for timing in nanoseconds) */
+#define THOUSAND                              1000LLU /*!< Integer value for 1 thousand */
+#define MILLION                            1000000LLU /*!< Integer value for 1 million (ideal for timing related things) */
+#define THOUSAND_MILLION                1000000000LLU /*!< Integer value for 1,000 million */
+#define BILLION                      1000000000000LLU /*!< Integer value for 1 billion (ideal for timing in nanoseconds) */
+#define THOUSAND_BILLION          1000000000000000LLU
+#define TRILLION               1000000000000000000LLU
+//#define THOUSAND_TRILLION   1000000000000000000000LLU // Can't go above 18446744073709551615
+//#define QUADRILLION      1000000000000000000000000LLU
 
-#define KILOBYTE                   1024 /*!< Bytes in a kilobyte */
-#define MEGABYTE                1048576 /*!< Bytes in a megabyte */
-#define GIGABYTE             1073741824 /*!< Bytes in a gigabyte */
-#define TERABYTE          1099511627776 /*!< Bytes in a terabyte */
+#define  KILOBYTE                             1024LLU /*!< Bytes in a kilobyte */
+#define  MEGABYTE                          1048576LLU /*!< Bytes in a megabyte */
+#define  GIGABYTE                       1073741824LLU /*!< Bytes in a gigabyte */
+#define  TERABYTE                    1099511627776LLU /*!< Bytes in a terabyte */
+#define  PETABYTE                 1125899906842624LLU
+#define   EXABYTE              1152921504606846976LLU
+//#define ZETTABYTE           1180591620717411303424LLU
+//#define YOTTABYTE        1208925819614629174706176LLU
 
 typedef unsigned char byte_t; /*!< A byte is just 8 bits, no signedness or an other fancy stuff ;-) */
 

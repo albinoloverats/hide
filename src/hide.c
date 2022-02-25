@@ -379,8 +379,8 @@ int main(int argc, char **argv)
 #ifndef __DEBUG__
 	{
 		cli_status_e ui_status = CLI_INIT;
-		cli_progress_t ui_current = { 0, 1 }; /* updated after reading image */
-		cli_progress_t ui_total = { 0, 3 }; /* maximum of 3 steps (read, update, write) */
+		cli_progress_t ui_current = { 0, 1, NULL }; /* updated after reading image */
+		cli_progress_t ui_total   = { 0, 3, NULL }; /* maximum of 3 steps (read, update, write) */
 		ui.status = &ui_status;
 		ui.current = &ui_current;
 		ui.total = &ui_total;
