@@ -20,7 +20,11 @@
 #include <math.h>
 #include <stdlib.h>
 
-#include "common/common.h"
+/* submodule includes */
+
+#include "common.h"
+
+/* project includes */
 
 #include "jpeg.h"
 

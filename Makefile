@@ -1,9 +1,10 @@
 .PHONY: hide clean distclean
 
-SOURCE   = src/hide.c src/common/error.c src/common/cli.c
+SOURCE   = src/hide.c
+COMMON   = common/src/error.c common/src/cli.c common/src/mem.c
 
 CFLAGS  += -Wall -Wextra -Werror -std=gnu99 -pipe -O2
-CPPFLAGS = -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64
+CPPFLAGS = -Icommon/src -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64
 
 LIBS     = -ldl -lpthread
 SHARED   = -fPIC -shared -Wl,-soname,
@@ -13,12 +14,12 @@ DEBUG    = -D__DEBUG__ -O0 -g3 -ggdb
 all: hide bmp jpeg png tiff webp
 
 hide:
-	 @$(CC) $(CFLAGS) $(CPPFLAGS) $(LIBS) $(SOURCE) -o hide
-	-@echo "built ‘$(SOURCE)’ → ‘hide’"
+	 @$(CC) $(CFLAGS) $(CPPFLAGS) $(LIBS) $(SOURCE) $(COMMON) -o hide
+	-@echo "built ‘$(SOURCE) $(COMMON)’ → ‘hide’"
 
 #hide-gui:
-#	 @$(CC) $(CFLAGS) $(CPPFLAGS) $(LIBS) $(SOURCE) src/gui-gtk.c -o hide
-#	-@echo "built ‘$(SOURCE) src/gui-gtk.c’ → ‘hide’"
+#	 @$(CC) $(CFLAGS) $(CPPFLAGS) $(LIBS) $(SOURCE) $(COMMON) src/gui-gtk.c -o hide
+#	-@echo "built ‘$(SOURCE) $(COMMON) src/gui-gtk.c’ → ‘hide’"
 
 bmp:
 	 @$(CC) -o hide-bmp.so $(CFLAGS) $(CPPFLAGS) $(SHARED)hide-bmp.so src/bmp.c

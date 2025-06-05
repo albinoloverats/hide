@@ -27,7 +27,11 @@
 #include <stdbool.h>
 #include <unistd.h>
 
-#include "common/common.h"
+/* submodule includes */
+
+#include "common.h"
+
+/* project includes */
 
 #include "hide.h"
 #include "jpeg.h"
@@ -56,7 +60,7 @@ static int read_jpeg(image_info_t *image_info, void (*progress_update)(uint64_t,
 		return errno;
 
 	jpeg_message_t msg = { 0x00, NULL };
-	jpeg_image_t *image = calloc(sizeof (jpeg_image_t), 1);
+	jpeg_image_t *image = calloc(1, sizeof (jpeg_image_t));
 	data_info_t extra = *(data_info_t *)image_info->extra;
 	jpeg_load_e action = extra.hide ? JPEG_LOAD_READ : JPEG_LOAD_FIND;
 

@@ -36,9 +36,13 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 
-#include "common/common.h"
-#include "common/error.h"
-#include "common/cli.h"
+/* submodule includes */
+
+#include "common.h"
+#include "error.h"
+#include "cli.h"
+
+/* project includes */
 
 #include "hide.h"
 
@@ -53,7 +57,7 @@
 #define HIDE_CAPACITY (image_info.width * image_info.height - sizeof (uint64_t))
 
 #ifndef __DEBUG__
-static cli_t ui;
+static cli_s ui;
 #endif
 
 static int process_file(data_info_t data_info, image_info_t image_info, void (*progress_update)(uint64_t, uint64_t))
@@ -379,8 +383,8 @@ int main(int argc, char **argv)
 #ifndef __DEBUG__
 	{
 		cli_status_e ui_status = CLI_INIT;
-		cli_progress_t ui_current = { 0, 1, NULL }; /* updated after reading image */
-		cli_progress_t ui_total   = { 0, 3, NULL }; /* maximum of 3 steps (read, update, write) */
+		cli_progress_s ui_current = { 0, 1, NULL }; /* updated after reading image */
+		cli_progress_s ui_total   = { 0, 3, NULL }; /* maximum of 3 steps (read, update, write) */
 		ui.status = &ui_status;
 		ui.current = &ui_current;
 		ui.total = &ui_total;
