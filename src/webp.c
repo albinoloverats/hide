@@ -124,7 +124,7 @@ static int write_webp(image_info_t image_info, void (*progress_update)(uint64_t,
 static uint64_t info_webp(image_info_t *image_info)
 {
 	read_webp(image_info, NULL);
-	return HIDE_CAPACITY;
+	return hide_capacity(image_info->width, image_info->height);
 }
 
 static void free_webp(image_info_t image_info)

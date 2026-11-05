@@ -62,7 +62,7 @@ static int read_jpeg(image_info_t *image_info, void (*progress_update)(uint64_t,
 	jpeg_message_t msg = { 0x00, NULL };
 	jpeg_image_t *image = calloc(1, sizeof (jpeg_image_t));
 	data_info_t extra = *(data_info_t *)image_info->extra;
-	jpeg_load_e action = extra.hide ? JPEG_LOAD_READ : JPEG_LOAD_FIND;
+	jpeg_load_e action = extra.action == HIDE ? JPEG_LOAD_READ : JPEG_LOAD_FIND;
 
 	if (!jpeg_decode_data(fp, &msg, image, action, extra.fill))
 		goto clean_up;
@@ -158,7 +158,7 @@ extern uint64_t info_jpeg(image_info_t *image_info)
 	data_info_t extra = { NULL, 0, true, false };
 	image_info->extra = &extra;
 	read_jpeg(image_info, NULL);
-	return HIDE_CAPACITY;
+	return hide_capacity(image_info->width, image_info->height);
 }
 
 #ifndef __DEBUG_JPEG__

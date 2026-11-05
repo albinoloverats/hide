@@ -24,9 +24,18 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "cli.h"
+
 #ifndef EFTYPE
 	#define EFTYPE 79 /*!< Unsupported file/image type */
 #endif
+
+#define HIDE_VERSION "N/A"
+#define PROJECT_URL "https://albinoloverats.net/projects/hide"
+
+#define DIR_LIBRARY "/usr/lib/"
+#define DIR_LOCAL "./"
+
 
 static inline uint64_t hide_capacity(uint64_t width, uint64_t height)
 {
@@ -35,8 +44,6 @@ static inline uint64_t hide_capacity(uint64_t width, uint64_t height)
 	uint64_t pixels = width * height;
 	return pixels > sizeof (uint64_t) ? pixels - sizeof (uint64_t) : 0;
 }
-
-#define HIDE_CAPACITY hide_capacity(image_info->width, image_info->height)
 
 typedef struct _image_info_t
 {
@@ -53,11 +60,19 @@ typedef struct _image_info_t
 }
 image_info_t;
 
+typedef enum
+{
+	UNKNOWN,
+	HIDE,
+	FIND
+}
+hide_action_e;
+
 typedef struct
 {
 	char *file;
 	uint64_t size;
-	bool hide;
+	hide_action_e action;
 	bool fill;
 }
 data_info_t;
@@ -83,12 +98,17 @@ hide_files_t;
 
 typedef struct
 {
+	cli_s *ui;
 	hide_files_t files;
+	hide_action_e action;
 	bool fill;
 	int result;
 }
 process_options_t;
 
+
 extern void *process(void *options);
+
+extern void *find_supported_formats(char *path, image_info_t *image_info);
 
 #endif

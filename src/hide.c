@@ -25,7 +25,6 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <string.h>
-#include <locale.h>
 
 #include <dlfcn.h>
 #include <fcntl.h>
@@ -46,19 +45,6 @@
 
 #include "hide.h"
 
-#ifdef BUILD_GUI
-	#include "gui-gtk.h"
-#endif
-
-#define DIR_LIBRARY "/usr/lib/"
-#define DIR_LOCAL "./"
-
-#undef HIDE_CAPACITY /* here image_info isn't a pointer but a local variable */
-#define HIDE_CAPACITY hide_capacity(image_info.width, image_info.height)
-
-#ifndef __DEBUG__
-static cli_s ui;
-#endif
 
 static int process_file(data_info_t data_info, image_info_t image_info, void (*progress_update)(uint64_t, uint64_t))
 {
@@ -68,10 +54,12 @@ static int process_file(data_info_t data_info, image_info_t image_info, void (*p
 	uint8_t *map = NULL;
 	uint64_t size = ntohll(data_info.size);
 
-	if ((f = open(data_info.file, data_info.hide ? O_RDONLY : (O_RDWR | O_CREAT), S_IRUSR | S_IWUSR)) < 0)
+	if ((f = open(data_info.file, data_info.action == HIDE ? O_RDONLY : (O_RDWR | O_CREAT), S_IRUSR | S_IWUSR)) < 0)
 		return errno;
 
-	if (data_info.hide)
+	uint64_t capacity = hide_capacity(image_info.width, image_info.height);
+
+	if (data_info.action == HIDE)
 	{
 		struct stat s;
 		if (fstat(f, &s) < 0 || !S_ISREG(s.st_mode))
@@ -91,7 +79,7 @@ static int process_file(data_info_t data_info, image_info_t image_info, void (*p
 	}
 	else if (data_info.fill)
 	{
-		size = HIDE_CAPACITY;
+		size = capacity;
 		if (size > SIZE_MAX || (off_t)size < 0 || (uint64_t)(off_t)size != size)
 		{
 			errno = EFBIG;
@@ -114,7 +102,7 @@ static int process_file(data_info_t data_info, image_info_t image_info, void (*p
 		{
 			uint8_t *ptr = &(row[x * image_info.bpp]);
 
-			if (data_info.hide)
+			if (data_info.action == HIDE)
 			{
 				unsigned char c;
 				if (y == 0 && x < sizeof data_info.size && !data_info.fill)
@@ -138,7 +126,7 @@ static int process_file(data_info_t data_info, image_info_t image_info, void (*p
 					if (x == sizeof data_info.size - 1)
 					{
 						size = ntohll(data_info.size);
-						if (size > HIDE_CAPACITY || size > SIZE_MAX ||
+						if (size > capacity || size > SIZE_MAX ||
 						    (off_t)size < 0 || (uint64_t)(off_t)size != size)
 						{
 							errno = EFBIG;
@@ -184,7 +172,7 @@ done:
 	return errno;
 }
 
-static bool will_fit(data_info_t *data_info, image_info_t image_info)
+static bool will_fit(data_info_t *data_info, image_info_t image_info, uint64_t *capacity)
 {
 	/*
 	 * figure out how much data we can hide
@@ -197,13 +185,13 @@ static bool will_fit(data_info_t *data_info, image_info_t image_info)
 		errno = EINVAL;
 		return false;
 	}
-	if ((uint64_t)s.st_size > HIDE_CAPACITY)
+	*capacity = hide_capacity(image_info.width, image_info.height);
+	if ((uint64_t)s.st_size > *capacity)
 	{
 		errno = ENOSPC;
 		return false;
 	}
 	data_info->size = htonll(s.st_size);
-	data_info->hide = true;
 	return true;
 }
 
@@ -214,7 +202,7 @@ static int selector(const struct dirent *d)
 	       !strcmp(d->d_name + length - 3, ".so");
 }
 
-static void *find_supported_formats(char *path, image_info_t *image_info)
+extern void *find_supported_formats(char *path, image_info_t *image_info)
 {
 	void *so = NULL;
 	struct dirent **eps = NULL;
@@ -226,7 +214,7 @@ static void *find_supported_formats(char *path, image_info_t *image_info)
 	{
 		if (strcmp(path, DIR_LOCAL))
 			return find_supported_formats(DIR_LOCAL, image_info);
-		fprintf(stderr, "Could not find any hide image libraries!\n");
+		cli_eprintf("Could not find any hide image libraries!\n");
 		return NULL;
 	}
 	if (n < 0)
@@ -243,14 +231,14 @@ static void *find_supported_formats(char *path, image_info_t *image_info)
 			free(l);
 		if (so == NULL)
 		{
-			fprintf(stderr, "%s\n", dlerror());
+			cli_eprintf("%s\n", dlerror());
 			continue;
 		}
 		dlerror();
 		image_type_t *(*init)(void);
 		if (!(init = dlsym(so, "init")))
 		{
-			fprintf(stderr, "%s\n", dlerror());
+			cli_eprintf("%s\n", dlerror());
 			dlclose(so);
 			continue;
 		}
@@ -268,7 +256,7 @@ static void *find_supported_formats(char *path, image_info_t *image_info)
 			strcat(buffer, " ");
 			if (strlen(buffer) > 72)
 			{
-				fprintf(stderr, "%s\n", buffer);
+				cli_eprintf("%s\n", buffer);
 				memset(buffer, 0x00, sizeof buffer);
 			}
 		}
@@ -284,7 +272,7 @@ static void *find_supported_formats(char *path, image_info_t *image_info)
 		so = NULL;
 	}
 	if (!image_info && strlen(buffer))
-		fprintf(stderr, "%s\n", buffer);
+		cli_eprintf("%s\n", buffer);
 
 	for (int i = 0; i < n; ++i)
 		free(eps[i]);
@@ -293,13 +281,15 @@ static void *find_supported_formats(char *path, image_info_t *image_info)
 	return so;
 }
 
+static cli_s *ui = NULL;
+
 #ifndef __DEBUG__
 static void progress_current_update(uint64_t i, uint64_t j)
 {
 	if (i < j && i > 0)
 	{
-		ui.current->offset = i;
-		ui.current->size = j;
+		ui->current->offset = i;
+		ui->current->size = j;
 	}
 	return;
 }
@@ -310,25 +300,25 @@ static void progress_current_update(uint64_t i, uint64_t j)
 extern void *process(void *args)
 {
 	process_options_t *options = args;
+	ui = options->ui;
 	options->result = EXIT_FAILURE;
 	hide_files_t files = options->files;
 	image_info_t image_info = { files.image_in, NULL, NULL, NULL, NULL, 0, 0, 0, NULL, NULL };
-	data_info_t data_info = { files.data_file, 0, false, options->fill };
+	data_info_t data_info = { files.data_file, 0, options->action, options->fill };
 
 	errno = 0;
 	void *so = find_supported_formats(DIR_LIBRARY, &image_info);
 	if (!so)
 	{
 		options->result = errno ? errno : EFTYPE;
-#ifndef __DEBUG__
-		*ui.status = CLI_DONE;
-#endif
+		if (ui)
+			*ui->status = CLI_DONE;
 		return NULL;
 	}
 
 	if (!(image_info.read && image_info.write))
 	{
-		fprintf(stderr, "Unsupported image format\n");
+		cli_eprintf("Unsupported image format\n");
 		find_supported_formats(DIR_LIBRARY, NULL);
 		errno = EFTYPE;
 		goto done;
@@ -338,14 +328,14 @@ extern void *process(void *args)
 	 * current hack for JPEG images: use ->extra to indicate whether
 	 * hiding or finding
 	 */
-	data_info.hide = (bool)files.image_out;
 	image_info.extra = &data_info;
 
-#ifndef __DEBUG__
-	*ui.status = CLI_RUN;
-	ui.total->offset = 0;
-	ui.total->size = files.image_out ? 3 : 2;
-#endif
+	if (ui)
+	{
+		*ui->status = CLI_RUN;
+		ui->total->offset = 0;
+		ui->total->size = files.image_out ? 3 : 2;
+	}
 
 	/*
 	 * read the source image
@@ -355,22 +345,21 @@ extern void *process(void *args)
 
 	if (files.image_out)
 	{
-		if (!will_fit(&data_info, image_info))
-			die("Too much data to hide; find a larger image\nAvailable capacity: %" PRIu64 " bytes\n", HIDE_CAPACITY);
+		uint64_t capacity = 0;
+		if (!will_fit(&data_info, image_info, &capacity))
+			die("Too much data to hide; find a larger image\nAvailable capacity: %" PRIu64 " bytes\n", capacity);
 		/*
 		 * overlay the data on the image
 		 */
-#ifndef __DEBUG__
-		ui.total->offset++;
-#endif
+		if (ui)
+			ui->total->offset++;
 		if (process_file(data_info, image_info, progress_current_update))
 			die("Failed during data processing");
 		/*
 		 * write the image with the hidden data
 		 */
-#ifndef __DEBUG__
-		ui.total->offset++;
-#endif
+		if (ui)
+			ui->total->offset++;
 		image_info.file = files.image_out;
 		if (image_info.write(image_info, progress_current_update))
 			die("Failed to write output image");
@@ -380,115 +369,20 @@ extern void *process(void *args)
 		/*
 		 * extract the hidden data
 		 */
-#ifndef __DEBUG__
-		ui.total->offset++;
-#endif
+		if (ui)
+			ui->total->offset++;
 		if (process_file(data_info, image_info, progress_current_update))
 			die("Failed during data processing");
 		image_info.free(image_info);
 	}
 
-#ifndef __DEBUG__
-	ui.total->offset = ui.total->size;
-#endif
+	if (ui)
+		ui->total->offset = ui->total->size;
 	errno = EXIT_SUCCESS;
 done:
 	options->result = errno;
 	dlclose(so);
-#ifndef __DEBUG__
-	*ui.status = CLI_DONE;
-#endif
+	if (ui)
+		*ui->status = CLI_DONE;
 	return NULL;
-}
-
-int main(int argc, char **argv)
-{
-	if (argc < 2 || argc > 5)
-	{
-		fprintf(stderr, "Usage: %s [-f] <source image> <file to hide> <output image>\n", argv[0]);
-		fprintf(stderr, "       %s [-f] <image> <recovered file>\n", argv[0]);
-		fprintf(stderr, "       %s <image>\n", argv[0]);
-		find_supported_formats(DIR_LIBRARY, NULL);
-		return EXIT_FAILURE;
-	}
-	else if (argc == 2)
-	{
-		struct stat s;
-		if (stat(argv[1], &s) < 0 && errno == ENOENT)
-		{
-			fprintf(stderr, "Could not read file %s\n", argv[1]);
-			return errno;
-		}
-		image_info_t image_info = { argv[1], NULL, NULL, NULL, NULL, 0, 0, 0, NULL, NULL };
-#ifndef __DEBUG_JPEG__
-		void *so = find_supported_formats(DIR_LIBRARY, &image_info);
-		if (!so)
-			return errno;
-#else
-		extern uint64_t info_jpeg(image_info_t *image_info);
-		extern void free_jpeg(image_info_t image_info);
-		image_info.info = info_jpeg;
-		image_info.free = free_jpeg;
-#endif
-		if (!image_info.info)
-		{
-			fprintf(stderr, "Unsupported image format\n");
-			find_supported_formats(DIR_LIBRARY, NULL);
-			errno = EFTYPE;
-		}
-		else
-		{
-			setlocale(LC_NUMERIC, "");
-			printf("File capacity: %'" PRIu64 " bytes\n", image_info.info(&image_info));
-			image_info.free(image_info);
-			errno = EXIT_SUCCESS;
-		}
-#ifndef __DEBUG_JPEG__
-		dlclose(so);
-#endif
-		return errno;
-	}
-
-	int o = strcmp(argv[1], "-f") ? 0 : 1;
-
-	hide_files_t files = { argv[o + 1], argv[o + 2], argv[o + 3] };
-	process_options_t options = { files, o, EXIT_FAILURE };
-
-#ifndef __DEBUG__
-	cli_status_e ui_status = CLI_INIT;
-	cli_progress_s ui_current = { 0, 1, NULL }; /* updated after reading image */
-	cli_progress_s ui_total   = { 0, 3, NULL }; /* maximum of 3 steps (read, update, write) */
-	ui.status = &ui_status;
-	ui.current = &ui_current;
-	ui.total = &ui_total;
-	/*
-	 * TODO start process() in own thread, then call cli_display()
-	 *
-	 * remember that process() will have to set the status once it's finished
-	 */
-	pthread_t t;
-	pthread_attr_t a;
-	pthread_attr_init(&a);
-	pthread_attr_setdetachstate(&a, PTHREAD_CREATE_JOINABLE);
-	int error = pthread_create(&t, &a, process, &options);
-	pthread_attr_destroy(&a);
-	if (error)
-	{
-		fprintf(stderr, "Could not create worker thread: %s\n", strerror(error));
-		return EXIT_FAILURE;
-	}
-
-	cli_display(&ui);
-
-	error = pthread_join(t, NULL);
-	if (error)
-	{
-		fprintf(stderr, "Could not join worker thread: %s\n", strerror(error));
-		return EXIT_FAILURE;
-	}
-#else
-	process(&options);
-#endif
-
-	return options.result;
 }

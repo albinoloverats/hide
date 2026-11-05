@@ -1,12 +1,12 @@
 .PHONY: all test hide bmp jpeg png tiff webp clean distclean
 
-SOURCE    = src/hide.c
-COMMON    = common/src/error.c common/src/cli.c common/src/mem.c
+SOURCE    = src/main.c src/hide.c
+COMMON    = common/src/error.c common/src/cli.c common/src/config.c common/src/mem.c common/src/list.c common/src/version.c
 
 CFLAGS   += -Wall -Wextra -Werror -std=gnu99 -pipe -O2
 CPPFLAGS  = -Icommon/src -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64
 
-LIBS      = -ldl -lpthread
+LIBS      = -ldl -lpthread -lcurl
 SHARED    = -fPIC -shared -Wl,-soname,
 
 DEBUG     = -D__DEBUG__ -O0 -g3 -ggdb
@@ -96,7 +96,7 @@ debug-webp:
 
 clean:
 	 @rm -fv hide
-	 @rm -fvr coverage
+	 @rm -fvr coverage *.gcda *.gcno
 	 @${MAKE} -C common clean
 
 distclean: clean

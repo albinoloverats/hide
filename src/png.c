@@ -256,7 +256,7 @@ cf:
 static uint64_t info_png(image_info_t *image_info)
 {
 	read_png(image_info, NULL);
-	return HIDE_CAPACITY;
+	return hide_capacity(image_info->width, image_info->height);
 }
 
 static void free_png(image_info_t image_info)
