@@ -54,7 +54,7 @@
 #define DIR_LOCAL "./"
 
 #undef HIDE_CAPACITY /* here image_info isn't a pointer but a local variable */
-#define HIDE_CAPACITY (image_info.width * image_info.height - sizeof (uint64_t))
+#define HIDE_CAPACITY hide_capacity(image_info.width, image_info.height)
 
 #ifndef __DEBUG__
 static cli_s ui;
@@ -64,13 +64,47 @@ static int process_file(data_info_t data_info, image_info_t image_info, void (*p
 {
 	errno = EXIT_SUCCESS;
 
-	int64_t f = 0;
+	int f = -1;
 	uint8_t *map = NULL;
+	uint64_t size = ntohll(data_info.size);
 
 	if ((f = open(data_info.file, data_info.hide ? O_RDONLY : (O_RDWR | O_CREAT), S_IRUSR | S_IWUSR)) < 0)
-		die("Could not open %s", data_info.file);
-	if (data_info.hide && (map = mmap(NULL, ntohll(data_info.size), PROT_READ, MAP_SHARED, f, 0)) == MAP_FAILED)
-		die("Could not map file %s into memory", data_info.file);
+		return errno;
+
+	if (data_info.hide)
+	{
+		struct stat s;
+		if (fstat(f, &s) < 0 || !S_ISREG(s.st_mode))
+			goto done;
+		size = (uint64_t)s.st_size;
+		data_info.size = htonll(size);
+		if (size > SIZE_MAX)
+		{
+			errno = EFBIG;
+			goto done;
+		}
+		if (size && (map = mmap(NULL, (size_t)size, PROT_READ, MAP_SHARED, f, 0)) == MAP_FAILED)
+		{
+			map = NULL;
+			goto done;
+		}
+	}
+	else if (data_info.fill)
+	{
+		size = HIDE_CAPACITY;
+		if (size > SIZE_MAX || (off_t)size < 0 || (uint64_t)(off_t)size != size)
+		{
+			errno = EFBIG;
+			goto done;
+		}
+		if (ftruncate(f, (off_t)size) < 0)
+			goto done;
+		if (size && (map = mmap(NULL, (size_t)size, PROT_READ | PROT_WRITE, MAP_SHARED, f, 0)) == MAP_FAILED)
+		{
+			map = NULL;
+			goto done;
+		}
+	}
 
 	uint8_t *z = (uint8_t *)&data_info.size;
 	for (uint64_t i = 0, y = 0; y < image_info.height; y++)
@@ -85,7 +119,7 @@ static int process_file(data_info_t data_info, image_info_t image_info, void (*p
 				unsigned char c;
 				if (y == 0 && x < sizeof data_info.size && !data_info.fill)
 					c = z[x];
-				else if (i < ntohll(data_info.size))
+				else if (i < size)
 					c = map[i];
 				else /* TODO use something more secure */
 					c = (uint8_t)lrand48();
@@ -103,22 +137,33 @@ static int process_file(data_info_t data_info, image_info_t image_info, void (*p
 					z[x] = c;
 					if (x == sizeof data_info.size - 1)
 					{
-						ftruncate(f, ntohll(data_info.size));
-						if ((map = mmap(NULL, ntohll(data_info.size), PROT_READ | PROT_WRITE, MAP_SHARED, f, 0)) == MAP_FAILED)
-							die("Could not map file %s into memory", data_info.file);
+						size = ntohll(data_info.size);
+						if (size > HIDE_CAPACITY || size > SIZE_MAX ||
+						    (off_t)size < 0 || (uint64_t)(off_t)size != size)
+						{
+							errno = EFBIG;
+							goto done;
+						}
+						if (ftruncate(f, (off_t)size) < 0)
+							goto done;
+						if (!size)
+							goto done;
+						if ((map = mmap(NULL, (size_t)size, PROT_READ | PROT_WRITE, MAP_SHARED, f, 0)) == MAP_FAILED)
+						{
+							map = NULL;
+							goto done;
+						}
 					}
 				}
-				else if (data_info.fill && map == NULL)
-				{
-					data_info.size = htonll(image_info.height * image_info.width * image_info.bpp);
-					ftruncate(f, ntohll(data_info.size));
-					if ((map = mmap(NULL, ntohll(data_info.size), PROT_READ | PROT_WRITE, MAP_SHARED, f, 0)) == MAP_FAILED)
-						die("Could not map file %s into memory", data_info.file);
-					map[i] = c;
-					errno = EXIT_SUCCESS;
-				}
 				else
+				{
+					if (i >= size || !map)
+					{
+						errno = EIO;
+						goto done;
+					}
 					map[i] = c;
+				}
 			}
 			if (y > 0 || x >= sizeof data_info.size)
 			{
@@ -126,14 +171,16 @@ static int process_file(data_info_t data_info, image_info_t image_info, void (*p
 				if (progress_update)
 					progress_update(i, ntohll(data_info.size));
 			}
-			if (map && i >= ntohll(data_info.size) && !data_info.fill)
+			if (map && i >= size && !data_info.fill)
 				goto done;
 		}
 	}
 
 done:
-	munmap(map, ntohll(data_info.size));
-	close(f);
+	if (map)
+		munmap(map, (size_t)size);
+	if (f >= 0)
+		close(f);
 	return errno;
 }
 
@@ -143,7 +190,13 @@ static bool will_fit(data_info_t *data_info, image_info_t image_info)
 	 * figure out how much data we can hide
 	 */
 	struct stat s;
-	stat(data_info->file, &s);
+	if (stat(data_info->file, &s) < 0)
+		return false;
+	if (!S_ISREG(s.st_mode) || s.st_size < 0)
+	{
+		errno = EINVAL;
+		return false;
+	}
 	if ((uint64_t)s.st_size > HIDE_CAPACITY)
 	{
 		errno = ENOSPC;
@@ -156,15 +209,19 @@ static bool will_fit(data_info_t *data_info, image_info_t image_info)
 
 static int selector(const struct dirent *d)
 {
-	return !strncmp("hide-", d->d_name, 5);
+	size_t length = strlen(d->d_name);
+	return length > 8 && !strncmp("hide-", d->d_name, 5) &&
+	       !strcmp(d->d_name + length - 3, ".so");
 }
 
 static void *find_supported_formats(char *path, image_info_t *image_info)
 {
 	void *so = NULL;
-	struct dirent **eps;
+	struct dirent **eps = NULL;
 	int n = scandir(path, &eps, selector, NULL);
 	char buffer[80] = "Supported image formats: ";
+	if (n < 0 && strcmp(path, DIR_LOCAL))
+		return find_supported_formats(DIR_LOCAL, image_info);
 	if (n == 0)
 	{
 		if (strcmp(path, DIR_LOCAL))
@@ -172,6 +229,8 @@ static void *find_supported_formats(char *path, image_info_t *image_info)
 		fprintf(stderr, "Could not find any hide image libraries!\n");
 		return NULL;
 	}
+	if (n < 0)
+		return NULL;
 	for (int i = 0; i < n; ++i)
 	{
 		char *l = NULL;
@@ -187,7 +246,8 @@ static void *find_supported_formats(char *path, image_info_t *image_info)
 			fprintf(stderr, "%s\n", dlerror());
 			continue;
 		}
-		image_type_t *(*init)();
+		dlerror();
+		image_type_t *(*init)(void);
 		if (!(init = dlsym(so, "init")))
 		{
 			fprintf(stderr, "%s\n", dlerror());
@@ -195,6 +255,13 @@ static void *find_supported_formats(char *path, image_info_t *image_info)
 			continue;
 		}
 		image_type_t *format = init();
+		if (!format || !format->type || !format->is_type || !format->read ||
+		    !format->write || !format->info || !format->free)
+		{
+			dlclose(so);
+			so = NULL;
+			continue;
+		}
 		if (!image_info)
 		{
 			strcat(buffer, format->type);
@@ -243,13 +310,21 @@ static void progress_current_update(uint64_t i, uint64_t j)
 extern void *process(void *args)
 {
 	process_options_t *options = args;
+	options->result = EXIT_FAILURE;
 	hide_files_t files = options->files;
 	image_info_t image_info = { files.image_in, NULL, NULL, NULL, NULL, 0, 0, 0, NULL, NULL };
 	data_info_t data_info = { files.data_file, 0, false, options->fill };
 
+	errno = 0;
 	void *so = find_supported_formats(DIR_LIBRARY, &image_info);
 	if (!so)
-		pthread_exit(&errno);
+	{
+		options->result = errno ? errno : EFTYPE;
+#ifndef __DEBUG__
+		*ui.status = CLI_DONE;
+#endif
+		return NULL;
+	}
 
 	if (!(image_info.read && image_info.write))
 	{
@@ -318,13 +393,12 @@ extern void *process(void *args)
 #endif
 	errno = EXIT_SUCCESS;
 done:
+	options->result = errno;
 	dlclose(so);
 #ifndef __DEBUG__
 	*ui.status = CLI_DONE;
-	pthread_exit(&errno);
-#else
-	return &errno;
 #endif
+	return NULL;
 }
 
 int main(int argc, char **argv)
@@ -378,17 +452,15 @@ int main(int argc, char **argv)
 	int o = strcmp(argv[1], "-f") ? 0 : 1;
 
 	hide_files_t files = { argv[o + 1], argv[o + 2], argv[o + 3] };
-	process_options_t options = { files, o };
+	process_options_t options = { files, o, EXIT_FAILURE };
 
 #ifndef __DEBUG__
-	{
-		cli_status_e ui_status = CLI_INIT;
-		cli_progress_s ui_current = { 0, 1, NULL }; /* updated after reading image */
-		cli_progress_s ui_total   = { 0, 3, NULL }; /* maximum of 3 steps (read, update, write) */
-		ui.status = &ui_status;
-		ui.current = &ui_current;
-		ui.total = &ui_total;
-	}
+	cli_status_e ui_status = CLI_INIT;
+	cli_progress_s ui_current = { 0, 1, NULL }; /* updated after reading image */
+	cli_progress_s ui_total   = { 0, 3, NULL }; /* maximum of 3 steps (read, update, write) */
+	ui.status = &ui_status;
+	ui.current = &ui_current;
+	ui.total = &ui_total;
 	/*
 	 * TODO start process() in own thread, then call cli_display()
 	 *
@@ -398,15 +470,25 @@ int main(int argc, char **argv)
 	pthread_attr_t a;
 	pthread_attr_init(&a);
 	pthread_attr_setdetachstate(&a, PTHREAD_CREATE_JOINABLE);
-	pthread_create(&t, &a, process, &options);
+	int error = pthread_create(&t, &a, process, &options);
 	pthread_attr_destroy(&a);
+	if (error)
+	{
+		fprintf(stderr, "Could not create worker thread: %s\n", strerror(error));
+		return EXIT_FAILURE;
+	}
 
 	cli_display(&ui);
 
-	pthread_join(t, NULL);
+	error = pthread_join(t, NULL);
+	if (error)
+	{
+		fprintf(stderr, "Could not join worker thread: %s\n", strerror(error));
+		return EXIT_FAILURE;
+	}
 #else
 	process(&options);
 #endif
 
-	return errno;
+	return options.result;
 }

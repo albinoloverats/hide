@@ -28,7 +28,15 @@
 	#define EFTYPE 79 /*!< Unsupported file/image type */
 #endif
 
-#define HIDE_CAPACITY (image_info->width * image_info->height - sizeof (uint64_t))
+static inline uint64_t hide_capacity(uint64_t width, uint64_t height)
+{
+	if (height && width > UINT64_MAX / height)
+		return 0;
+	uint64_t pixels = width * height;
+	return pixels > sizeof (uint64_t) ? pixels - sizeof (uint64_t) : 0;
+}
+
+#define HIDE_CAPACITY hide_capacity(image_info->width, image_info->height)
 
 typedef struct _image_info_t
 {
@@ -77,6 +85,7 @@ typedef struct
 {
 	hide_files_t files;
 	bool fill;
+	int result;
 }
 process_options_t;
 

@@ -1,4 +1,4 @@
-.PHONY: hide clean distclean
+.PHONY: all test hide bmp jpeg png tiff webp clean distclean
 
 SOURCE    = src/hide.c
 COMMON    = common/src/error.c common/src/cli.c common/src/mem.c
@@ -26,11 +26,13 @@ else
 	 @${MAKE} -C common test CFLAGS=--coverage
 endif
 
+	 @${MAKE} -B all CFLAGS="$(CFLAGS) --coverage"
+	 @sh test/test_hide.sh
 	 @rm -fvr coverage
 	 @mkdir -p coverage
 	 @gcovr --root . --gcov-executable "${GCOV}" --filter '^(src/|common/src/)' --xml-pretty --output coverage/coverage.xml --html-details coverage/index.html --print-summary
 
-hide:
+hide: $(SOURCE) $(COMMON) src/hide.h
 	 @$(CC) $(CFLAGS) $(CPPFLAGS) $(LIBS) $(SOURCE) $(COMMON) -o hide
 	-@echo "built ‘$(SOURCE) $(COMMON)’ → ‘hide’"
 
@@ -38,30 +40,30 @@ hide:
 #	 @$(CC) $(CFLAGS) $(CPPFLAGS) $(LIBS) $(SOURCE) $(COMMON) src/gui-gtk.c -o hide
 #	-@echo "built ‘$(SOURCE) $(COMMON) src/gui-gtk.c’ → ‘hide’"
 
-bmp:
+bmp: src/bmp.c src/hide.h
 	 @$(CC) -o hide-bmp.so $(CFLAGS) $(CPPFLAGS) $(SHARED)hide-bmp.so src/bmp.c
 	-@echo "built ‘bmp.c’ → ‘hide-bmp.so’"
 
-jpeg:
+jpeg: src/jpeg.c src/jpeg-load.c src/jpeg-save.c src/jpeg.h src/hide.h
 	 @$(CC) -o hide-jpeg.so $(CFLAGS) $(CPPFLAGS) -lm $(SHARED)hide-jpeg.so src/jpeg.c src/jpeg-load.c src/jpeg-save.c
 	-@echo "built ‘jpeg.c jpeg-load.c jpeg-save.c’ → ‘hide-jpeg.so’"
 
-png:
+png: src/png.c src/hide.h
 	 @$(CC) -o hide-png.so $(CFLAGS) $(CPPFLAGS) $(SHARED)hide-png.so `pkg-config --cflags --libs libpng` src/png.c
 	-@echo "built ‘png.c’ → ‘hide-png.so’"
 
-tiff:
+tiff: src/tiff.c src/hide.h
 	 @$(CC) -o hide-tiff.so $(CFLAGS) $(CPPFLAGS) $(SHARED)hide-tiff.so -ltiff src/tiff.c
 	-@echo "built ‘tiff.c’ → ‘hide-tiff.so’"
 
-webp:
+webp: src/webp.c src/hide.h
 	 @$(CC) -o hide-webp.so $(CFLAGS) $(CPPFLAGS) $(SHARED)hide-webp.so -lwebp src/webp.c
 	-@echo "built ‘webp.c’ → ‘hide-webp.so’"
 
 debug: debug-hide debug-bmp debug-jpeg debug-png debug-tiff debug-webp
 
 debug-hide:
-	 @$(CC) $(CFLAGS) $(CPPFLAGS) $(LIBS) $(SOURCE) $(DEBUG) -o hide
+	 @$(CC) $(CFLAGS) $(CPPFLAGS) $(LIBS) $(SOURCE) $(COMMON) $(DEBUG) -o hide
 	-@echo "built ‘$(SOURCE)’ → ‘hide’"
 
 debug-profile-jpeg:

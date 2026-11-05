@@ -47,29 +47,47 @@ static bool is_png(char *file_name)
 static int read_png(image_info_t *image_info, void (*progress_update)(uint64_t, uint64_t))
 {
 	errno = EXIT_SUCCESS;
+	image_info->buffer = NULL;
+	image_info->extra = NULL;
+	image_info->width = 0;
+	image_info->height = 0;
+	image_info->bpp = 0;
 
 	FILE *fp = fopen(image_info->file, "rb");
 	if (!fp)
 		return errno;
 
 	uint8_t header[8];
-	fread(header, 1, sizeof header, fp);
+	if (fread(header, 1, sizeof header, fp) != sizeof header)
+	{
+		errno = EIO;
+		goto cf;
+	}
 
 	/* initialize stuff */
 	png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 	if (!png_ptr)
+	{
+		errno = ENOMEM;
 		goto cf;
+	}
 
 	png_infop info_ptr = png_create_info_struct(png_ptr);
 	if (!info_ptr)
+	{
+		errno = ENOMEM;
 		goto cleanup;
+	}
 
 	/*
 	 * libpng uses setjmp as a replacement for exceptions; so “catch”
 	 * them and handle them our own way
 	 */
 	if (setjmp(png_jmpbuf(png_ptr)))
+	{
+		errno = EIO;
 		goto cleanup;
+	}
 
 	png_init_io(png_ptr, fp);
 	png_set_sig_bytes(png_ptr, 8);
@@ -80,6 +98,11 @@ static int read_png(image_info_t *image_info, void (*progress_update)(uint64_t, 
 	image_info->height = png_get_image_height(png_ptr, info_ptr);
 	png_byte bit_depth = png_get_bit_depth(png_ptr, info_ptr);
 	image_info->extra = malloc(sizeof bit_depth);
+	if (!image_info->extra)
+	{
+		errno = ENOMEM;
+		goto cleanup;
+	}
 	memcpy(image_info->extra, &bit_depth, sizeof bit_depth);
 
 	switch (png_get_color_type(png_ptr, info_ptr))
@@ -94,18 +117,38 @@ static int read_png(image_info_t *image_info, void (*progress_update)(uint64_t, 
 			errno = ENOTSUP;
 			goto cleanup;
 	}
+	if (!image_info->width || !image_info->height ||
+	    image_info->height > SIZE_MAX / sizeof *image_info->buffer ||
+	    image_info->width > SIZE_MAX / image_info->bpp)
+	{
+		errno = EOVERFLOW;
+		goto cleanup;
+	}
 
 	//number_of_passes = png_set_interlace_handling(png_ptr);
 	png_read_update_info(png_ptr, info_ptr);
 
 	/* read file */
 	if (setjmp(png_jmpbuf(png_ptr)))
+	{
+		errno = EIO;
 		goto cleanup;
+	}
 
-	image_info->buffer = malloc(sizeof (uint8_t *) * image_info->height);
+	image_info->buffer = calloc((size_t)image_info->height, sizeof *image_info->buffer);
+	if (!image_info->buffer)
+	{
+		errno = ENOMEM;
+		goto cleanup;
+	}
 	for (uint64_t y = 0; y < image_info->height; y++)
 	{
 		image_info->buffer[y] = malloc(image_info->width * image_info->bpp);
+		if (!image_info->buffer[y])
+		{
+			errno = ENOMEM;
+			goto cleanup;
+		}
 		if (progress_update)
 			progress_update(y, image_info->height);
 	}
@@ -114,6 +157,18 @@ static int read_png(image_info_t *image_info, void (*progress_update)(uint64_t, 
 
 cleanup:
 	png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+	if (errno != EXIT_SUCCESS)
+	{
+		if (image_info->buffer)
+		{
+			for (uint64_t y = 0; y < image_info->height; y++)
+				free(image_info->buffer[y]);
+			free(image_info->buffer);
+			image_info->buffer = NULL;
+		}
+		free(image_info->extra);
+		image_info->extra = NULL;
+	}
 cf:
 	fclose(fp);
 
@@ -206,8 +261,9 @@ static uint64_t info_png(image_info_t *image_info)
 
 static void free_png(image_info_t image_info)
 {
-	for (uint64_t y = 0; y < image_info.height; y++)
-		free(image_info.buffer[y]);
+	if (image_info.buffer)
+		for (uint64_t y = 0; y < image_info.height; y++)
+			free(image_info.buffer[y]);
 	free(image_info.buffer);
 	free(image_info.extra);
 }
