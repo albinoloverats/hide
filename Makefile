@@ -1,17 +1,34 @@
 .PHONY: hide clean distclean
 
-SOURCE   = src/hide.c
-COMMON   = common/src/error.c common/src/cli.c common/src/mem.c
+SOURCE    = src/hide.c
+COMMON    = common/src/error.c common/src/cli.c common/src/mem.c
 
-CFLAGS  += -Wall -Wextra -Werror -std=gnu99 -pipe -O2
-CPPFLAGS = -Icommon/src -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64
+CFLAGS   += -Wall -Wextra -Werror -std=gnu99 -pipe -O2
+CPPFLAGS  = -Icommon/src -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64
 
-LIBS     = -ldl -lpthread
-SHARED   = -fPIC -shared -Wl,-soname,
+LIBS      = -ldl -lpthread
+SHARED    = -fPIC -shared -Wl,-soname,
 
-DEBUG    = -D__DEBUG__ -O0 -g3 -ggdb
+DEBUG     = -D__DEBUG__ -O0 -g3 -ggdb
+
+TEST_LIBS = $(shell pkg-config --libs cmocka) $(LIBS)
+GCOV      = $(shell command -v gcov-$(shell ${CC} -dumpversion | cut -d. -f1) || ${CC} -print-prog-name=gcov)
 
 all: hide bmp jpeg png tiff webp
+
+test:
+	 @${MAKE} -C common clean
+	 @rm -fvr coverage
+ifneq ($(strip ${CMOCKA_XML_DIR}),)
+	 @mkdir -p "${CMOCKA_XML_DIR}"
+	 @CMOCKA_MESSAGE_OUTPUT=XML CMOCKA_XML_FILE="$(abspath ${CMOCKA_XML_DIR})/common.xml" ${MAKE} -C common test CFLAGS=--coverage CMOCKA_XML_DIR="$(abspath ${CMOCKA_XML_DIR})"
+else
+	 @${MAKE} -C common test CFLAGS=--coverage
+endif
+
+	 @rm -fvr coverage
+	 @mkdir -p coverage
+	 @gcovr --root . --gcov-executable "${GCOV}" --filter '^(src/|common/src/)' --xml-pretty --output coverage/coverage.xml --html-details coverage/index.html --print-summary
 
 hide:
 	 @$(CC) $(CFLAGS) $(CPPFLAGS) $(LIBS) $(SOURCE) $(COMMON) -o hide
@@ -77,6 +94,8 @@ debug-webp:
 
 clean:
 	 @rm -fv hide
+	 @rm -fvr coverage
+	 @${MAKE} -C common clean
 
 distclean: clean
 	 @rm -fv hide-bmp.so hide-jpeg.so hide-png.so hide-tiff.so hide-webp.so
