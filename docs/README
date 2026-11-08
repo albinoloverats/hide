@@ -98,4 +98,13 @@ Known Issues
     - Missing entire header for encoding (Slackware)
 
 
+Status
+------
+
+[![Github Pipeline](https://github.com/albinoloverats/hide/actions/workflows/coverage.yml/badge.svg)](https://github.com/albinoloverats/hide/actions/workflows/coverage.yml)
+[![Gitlab Pipeline](https://gitlab.com/albinoloverats/hide/badges/master/pipeline.svg)](https://gitlab.com/albinoloverats/hide/-/commits/master)
+[![Gitlab Coverage](https://gitlab.com/albinoloverats/hide/badges/master/coverage.svg)](https://gitlab.com/albinoloverats/hide/-/commits/master)
+[![Bitbucket Pipeline](https://img.shields.io/bitbucket/pipelines/albinoloverats/hide/master)](https://bitbucket.org/albinoloverats/hide/src/master)
+
+
 [encrypt]: https://albinoloverats.net/projects/encrypt
