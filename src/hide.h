@@ -1,6 +1,6 @@
 /*
  * hide ~ A tool for hiding data inside images
- * Copyright © 2014-2015, albinoloverats ~ Software Development
+ * Copyright © 2014-2026, albinoloverats ~ Software Development
  * email: hide@albinoloverats.net
  *
  * This program is free software: you can redistribute it and/or modify
@@ -45,20 +45,20 @@ static inline uint64_t hide_capacity(uint64_t width, uint64_t height)
 	return pixels > sizeof (uint64_t) ? pixels - sizeof (uint64_t) : 0;
 }
 
-typedef struct _image_info_t
+typedef struct _image_info_s
 {
 	char *file;
-	int (*read)(struct _image_info_t *, void (*progress_update)(uint64_t, uint64_t));
-	int (*write)(struct _image_info_t, void (*progress_update)(uint64_t, uint64_t));
-	uint64_t (*info)(struct _image_info_t *);
-	void (*free)(struct _image_info_t);
+	int (*read)(struct _image_info_s *, void (*progress_update)(uint64_t, uint64_t));
+	int (*write)(struct _image_info_s, void (*progress_update)(uint64_t, uint64_t));
+	uint64_t (*info)(struct _image_info_s *);
+	void (*free)(struct _image_info_s);
 	uint64_t height;
 	uint64_t width;
 	uint16_t bpp;
 	uint8_t **buffer;
 	void *extra;
 }
-image_info_t;
+image_info_s;
 
 typedef enum
 {
@@ -75,18 +75,18 @@ typedef struct
 	hide_action_e action;
 	bool fill;
 }
-data_info_t;
+data_info_s;
 
 typedef struct
 {
 	char *type;
 	bool (*is_type)(char *);
-	int (*read)(image_info_t *, void (*progress_update)(uint64_t, uint64_t));
-	int (*write)(image_info_t, void (*progress_update)(uint64_t, uint64_t));
-	uint64_t (*info)(image_info_t *);
-	void (*free)(image_info_t);
+	int (*read)(image_info_s *, void (*progress_update)(uint64_t, uint64_t));
+	int (*write)(image_info_s, void (*progress_update)(uint64_t, uint64_t));
+	uint64_t (*info)(image_info_s *);
+	void (*free)(image_info_s);
 }
-image_type_t;
+image_type_s;
 
 typedef struct
 {
@@ -94,21 +94,21 @@ typedef struct
 	char *data_file;
 	char *image_out;
 }
-hide_files_t;
+hide_files_s;
 
 typedef struct
 {
 	cli_s *ui;
-	hide_files_t files;
+	hide_files_s files;
 	hide_action_e action;
 	bool fill;
 	int result;
 }
-process_options_t;
+process_options_s;
 
 
 extern void *process(void *options);
 
-extern void *find_supported_formats(char *path, image_info_t *image_info);
+extern void *find_supported_formats(char *path, image_info_s *image_info);
 
 #endif

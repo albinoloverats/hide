@@ -1,6 +1,6 @@
 /*
  * hide ~ A tool for hiding data inside images
- * Copyright © 2014-2015, albinoloverats ~ Software Development
+ * Copyright © 2014-2026, albinoloverats ~ Software Development
  * email: hide@albinoloverats.net
  *
  * This program is free software: you can redistribute it and/or modify
@@ -46,7 +46,7 @@ static bool is_webp(char *file_name)
 	return WebPGetInfo(header, sizeof header, NULL, NULL);
 }
 
-static int read_webp(image_info_t *image_info, void (*progress_update)(uint64_t, uint64_t))
+static int read_webp(image_info_s *image_info, void (*progress_update)(uint64_t, uint64_t))
 {
 	errno = EXIT_SUCCESS;
 
@@ -90,7 +90,7 @@ static int read_webp(image_info_t *image_info, void (*progress_update)(uint64_t,
 	return errno;
 }
 
-static int write_webp(image_info_t image_info, void (*progress_update)(uint64_t, uint64_t))
+static int write_webp(image_info_s image_info, void (*progress_update)(uint64_t, uint64_t))
 {
 	errno = EXIT_SUCCESS;
 
@@ -121,22 +121,22 @@ static int write_webp(image_info_t image_info, void (*progress_update)(uint64_t,
 	return errno;
 }
 
-static uint64_t info_webp(image_info_t *image_info)
+static uint64_t info_webp(image_info_s *image_info)
 {
 	read_webp(image_info, NULL);
 	return hide_capacity(image_info->width, image_info->height);
 }
 
-static void free_webp(image_info_t image_info)
+static void free_webp(image_info_s image_info)
 {
 	for (uint64_t y = 0; y < image_info.height; y++)
 		free(image_info.buffer[y]);
 	free(image_info.buffer);
 }
 
-extern image_type_t *init(void)
+extern image_type_s *init(void)
 {
-	static image_type_t webp;
+	static image_type_s webp;
 	webp.type = "WEBP";
 	webp.is_type = is_webp;
 	webp.read = read_webp;

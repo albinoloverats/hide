@@ -1,6 +1,6 @@
 /*
  * hide ~ A tool for hiding data inside images
- * Copyright © 2014-2015, albinoloverats ~ Software Development
+ * Copyright © 2014-2026, albinoloverats ~ Software Development
  * email: hide@albinoloverats.net
  *
  * This program is free software: you can redistribute it and/or modify
@@ -44,7 +44,7 @@ static bool is_png(char *file_name)
 	return !png_sig_cmp(header, 0, sizeof header);
 }
 
-static int read_png(image_info_t *image_info, void (*progress_update)(uint64_t, uint64_t))
+static int read_png(image_info_s *image_info, void (*progress_update)(uint64_t, uint64_t))
 {
 	errno = EXIT_SUCCESS;
 	image_info->buffer = NULL;
@@ -175,7 +175,7 @@ cf:
 	return errno;
 }
 
-static int write_png(image_info_t image_info, void (*progress_update)(uint64_t, uint64_t))
+static int write_png(image_info_s image_info, void (*progress_update)(uint64_t, uint64_t))
 {
 	errno = EXIT_SUCCESS;
 
@@ -253,13 +253,13 @@ cf:
 	return errno;
 }
 
-static uint64_t info_png(image_info_t *image_info)
+static uint64_t info_png(image_info_s *image_info)
 {
 	read_png(image_info, NULL);
 	return hide_capacity(image_info->width, image_info->height);
 }
 
-static void free_png(image_info_t image_info)
+static void free_png(image_info_s image_info)
 {
 	if (image_info.buffer)
 		for (uint64_t y = 0; y < image_info.height; y++)
@@ -268,9 +268,9 @@ static void free_png(image_info_t image_info)
 	free(image_info.extra);
 }
 
-extern image_type_t *init(void)
+extern image_type_s *init(void)
 {
-	static image_type_t png;
+	static image_type_s png;
 	png.type = "PNG";
 	png.is_type = is_png;
 	png.read = read_png;

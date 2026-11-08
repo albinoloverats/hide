@@ -1,6 +1,6 @@
 /*
  * hide ~ A tool for hiding data inside images
- * Copyright © 2014-2015, albinoloverats ~ Software Development
+ * Copyright © 2014-2026, albinoloverats ~ Software Development
  * email: hide@albinoloverats.net
  *
  * This program is free software: you can redistribute it and/or modify
@@ -117,14 +117,14 @@ int main(int argc, char **argv)
 		if (stat(image, &s) < 0 && errno == ENOENT)
 			die(_("Could not read file %s\n"), image);
 
-		image_info_t image_info = { image, NULL, NULL, NULL, NULL, 0, 0, 0, NULL, NULL };
+		image_info_s image_info = { image, NULL, NULL, NULL, NULL, 0, 0, 0, NULL, NULL };
 #ifndef __DEBUG_JPEG__
 		void *so = find_supported_formats(DIR_LIBRARY, &image_info);
 		if (!so)
 			return errno;
 #else
-		extern uint64_t info_jpeg(image_info_t *image_info);
-		extern void free_jpeg(image_info_t image_info);
+		extern uint64_t info_jpeg(image_info_s *image_info);
+		extern void free_jpeg(image_info_s image_info);
 		image_info.info = info_jpeg;
 		image_info.free = free_jpeg;
 #endif
@@ -152,8 +152,8 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	hide_files_t files = { image, action == HIDE ? input : output, action == HIDE ? output : NULL };
-	process_options_t options = { NULL, files, action, fill, EXIT_FAILURE };
+	hide_files_s files = { image, action == HIDE ? input : output, action == HIDE ? output : NULL };
+	process_options_s options = { NULL, files, action, fill, EXIT_FAILURE };
 
 #ifndef __DEBUG__
 	cli_status_e ui_status = CLI_INIT;

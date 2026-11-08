@@ -1,6 +1,6 @@
 /*
  * hide ~ A tool for hiding data inside images
- * Copyright © 2014-2015, albinoloverats ~ Software Development
+ * Copyright © 2014-2026, albinoloverats ~ Software Development
  * email: hide@albinoloverats.net
  *
  * This program is free software: you can redistribute it and/or modify
@@ -46,7 +46,7 @@
 #include "hide.h"
 
 
-static int process_file(data_info_t data_info, image_info_t image_info, void (*progress_update)(uint64_t, uint64_t))
+static int process_file(data_info_s data_info, image_info_s image_info, void (*progress_update)(uint64_t, uint64_t))
 {
 	errno = EXIT_SUCCESS;
 
@@ -172,7 +172,7 @@ done:
 	return errno;
 }
 
-static bool will_fit(data_info_t *data_info, image_info_t image_info, uint64_t *capacity)
+static bool will_fit(data_info_s *data_info, image_info_s image_info, uint64_t *capacity)
 {
 	/*
 	 * figure out how much data we can hide
@@ -202,7 +202,7 @@ static int selector(const struct dirent *d)
 	       !strcmp(d->d_name + length - 3, ".so");
 }
 
-extern void *find_supported_formats(char *path, image_info_t *image_info)
+extern void *find_supported_formats(char *path, image_info_s *image_info)
 {
 	void *so = NULL;
 	struct dirent **eps = NULL;
@@ -235,14 +235,14 @@ extern void *find_supported_formats(char *path, image_info_t *image_info)
 			continue;
 		}
 		dlerror();
-		image_type_t *(*init)(void);
+		image_type_s *(*init)(void);
 		if (!(init = dlsym(so, "init")))
 		{
 			cli_eprintf("%s\n", dlerror());
 			dlclose(so);
 			continue;
 		}
-		image_type_t *format = init();
+		image_type_s *format = init();
 		if (!format || !format->type || !format->is_type || !format->read ||
 		    !format->write || !format->info || !format->free)
 		{
@@ -299,12 +299,12 @@ static void progress_current_update(uint64_t i, uint64_t j)
 
 extern void *process(void *args)
 {
-	process_options_t *options = args;
+	process_options_s *options = args;
 	ui = options->ui;
 	options->result = EXIT_FAILURE;
-	hide_files_t files = options->files;
-	image_info_t image_info = { files.image_in, NULL, NULL, NULL, NULL, 0, 0, 0, NULL, NULL };
-	data_info_t data_info = { files.data_file, 0, options->action, options->fill };
+	hide_files_s files = options->files;
+	image_info_s image_info = { files.image_in, NULL, NULL, NULL, NULL, 0, 0, 0, NULL, NULL };
+	data_info_s data_info = { files.data_file, 0, options->action, options->fill };
 
 	errno = 0;
 	void *so = find_supported_formats(DIR_LIBRARY, &image_info);

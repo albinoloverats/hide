@@ -1,6 +1,6 @@
 /*
  * hide ~ A tool for hiding data inside images
- * Copyright © 2014-2015, albinoloverats ~ Software Development
+ * Copyright © 2014-2026, albinoloverats ~ Software Development
  * email: hide@albinoloverats.net
  */
 
@@ -24,7 +24,7 @@
 /**********************************************************************/
 
 
-static jpeg_message_t *message;
+static jpeg_message_s *message;
 
 
 typedef struct
@@ -801,7 +801,7 @@ static void init_all(void)
 }
 
 
-extern void jpeg_encode_data(FILE *file, jpeg_message_t *msg, jpeg_image_t *info)
+extern void jpeg_encode_data(FILE *file, jpeg_message_s *msg, jpeg_image_s *info)
 {
 	message = msg;
 

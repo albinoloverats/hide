@@ -1,6 +1,6 @@
 /*
  * hide ~ A tool for hiding data inside images
- * Copyright © 2014-2015, albinoloverats ~ Software Development
+ * Copyright © 2014-2026, albinoloverats ~ Software Development
  * email: hide@albinoloverats.net
  *
  * This program is free software: you can redistribute it and/or modify
@@ -36,7 +36,7 @@ typedef struct
 	uint64_t size;
 	uint8_t *data;
 }
-jpeg_message_t;
+jpeg_message_s;
 
 typedef struct
 {
@@ -44,10 +44,10 @@ typedef struct
 	uint32_t width;
 	uint32_t height;
 }
-jpeg_image_t;
+jpeg_image_s;
 
 
-extern bool jpeg_decode_data(FILE *, jpeg_message_t *, jpeg_image_t *, jpeg_load_e, bool);
-extern void jpeg_encode_data(FILE *, jpeg_message_t *, jpeg_image_t *);
+extern bool jpeg_decode_data(FILE *, jpeg_message_s *, jpeg_image_s *, jpeg_load_e, bool);
+extern void jpeg_encode_data(FILE *, jpeg_message_s *, jpeg_image_s *);
 
 #endif /* _HIDE_JPEG_H */

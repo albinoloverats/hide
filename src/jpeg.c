@@ -1,6 +1,6 @@
 /*
  * hide ~ A tool for hiding data inside images
- * Copyright © 2014-2015, albinoloverats ~ Software Development
+ * Copyright © 2014-2026, albinoloverats ~ Software Development
  * email: hide@albinoloverats.net
  *
  * This program is free software: you can redistribute it and/or modify
@@ -51,7 +51,7 @@ static bool is_jpeg(char *file_name)
 	return !memcmp(header, jpeg_header, sizeof header);
 }
 
-static int read_jpeg(image_info_t *image_info, void (*progress_update)(uint64_t, uint64_t))
+static int read_jpeg(image_info_s *image_info, void (*progress_update)(uint64_t, uint64_t))
 {
 	errno = EXIT_SUCCESS;
 
@@ -59,9 +59,9 @@ static int read_jpeg(image_info_t *image_info, void (*progress_update)(uint64_t,
 	if (!fp)
 		return errno;
 
-	jpeg_message_t msg = { 0x00, NULL };
-	jpeg_image_t *image = calloc(1, sizeof (jpeg_image_t));
-	data_info_t extra = *(data_info_t *)image_info->extra;
+	jpeg_message_s msg = { 0x00, NULL };
+	jpeg_image_s *image = calloc(1, sizeof (jpeg_image_s));
+	data_info_s extra = *(data_info_s *)image_info->extra;
 	jpeg_load_e action = extra.action == HIDE ? JPEG_LOAD_READ : JPEG_LOAD_FIND;
 
 	if (!jpeg_decode_data(fp, &msg, image, action, extra.fill))
@@ -105,7 +105,7 @@ clean_up:
 	return errno;
 }
 
-static int write_jpeg(image_info_t image_info, void (*progress_update)(uint64_t, uint64_t))
+static int write_jpeg(image_info_s image_info, void (*progress_update)(uint64_t, uint64_t))
 {
 	errno = EXIT_SUCCESS;
 
@@ -113,11 +113,11 @@ static int write_jpeg(image_info_t image_info, void (*progress_update)(uint64_t,
 	if (!fp)
 		return errno;
 
-	jpeg_message_t msg = { image_info.width, NULL };
+	jpeg_message_s msg = { image_info.width, NULL };
 	msg.data = malloc(msg.size); // total capacity
 
 	/* retrieve the image data */
-	jpeg_image_t *image = image_info.extra;
+	jpeg_image_s *image = image_info.extra;
 
 	/* copy message from image_info.buffer to message.data */
 	for (uint64_t x = 0, i = 0; x < image_info.width * image_info.bpp; x += image_info.bpp, i++)
@@ -150,35 +150,35 @@ static int write_jpeg(image_info_t image_info, void (*progress_update)(uint64_t,
 }
 
 #ifndef __DEBUG_JPEG__
-static uint64_t info_jpeg(image_info_t *image_info)
+static uint64_t info_jpeg(image_info_s *image_info)
 #else
-extern uint64_t info_jpeg(image_info_t *image_info)
+extern uint64_t info_jpeg(image_info_s *image_info)
 #endif
 {
-	data_info_t extra = { NULL, 0, true, false };
+	data_info_s extra = { NULL, 0, true, false };
 	image_info->extra = &extra;
 	read_jpeg(image_info, NULL);
 	return hide_capacity(image_info->width, image_info->height);
 }
 
 #ifndef __DEBUG_JPEG__
-static void free_jpeg(image_info_t image_info)
+static void free_jpeg(image_info_s image_info)
 #else
-extern void free_jpeg(image_info_t image_info)
+extern void free_jpeg(image_info_s image_info)
 #endif
 {
 	free(image_info.buffer[0]);
 	free(image_info.buffer);
-	jpeg_image_t *image = image_info.extra;
+	jpeg_image_s *image = image_info.extra;
 	for (uint64_t i = 0; i < image->height; i++)
 		free(image->rgb[i]);
 	free(image->rgb);
 	free(image);
 }
 
-extern image_type_t *init(void)
+extern image_type_s *init(void)
 {
-	static image_type_t jpeg;
+	static image_type_s jpeg;
 	jpeg.type = "JPEG";
 	jpeg.is_type = is_jpeg;
 	jpeg.read = read_jpeg;

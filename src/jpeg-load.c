@@ -1,6 +1,6 @@
 /*
  * hide ~ A tool for hiding data inside images
- * Copyright © 2014-2015, albinoloverats ~ Software Development
+ * Copyright © 2014-2026, albinoloverats ~ Software Development
  * email: hide@albinoloverats.net
  */
 
@@ -44,7 +44,7 @@
 #define COMPONENTS      4
 
 
-static jpeg_message_t *message;
+static jpeg_message_s *message;
 static jpeg_load_e action;
 static uint64_t fill_size = 0;
 
@@ -895,7 +895,7 @@ static int JpegDecode(stJpegData *jdata)
 /**********************************************************************/
 
 
-extern bool jpeg_decode_data(FILE *file, jpeg_message_t *msg, jpeg_image_t *info, jpeg_load_e a, bool fill)
+extern bool jpeg_decode_data(FILE *file, jpeg_message_s *msg, jpeg_image_s *info, jpeg_load_e a, bool fill)
 {
 	message = msg;
 	action = a;
