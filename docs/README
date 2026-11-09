@@ -44,7 +44,7 @@ image.
 
 You can also use the script:
 
-./truly-hide <image> [file]
+    ./truly-hide <image> [file]
 
 This will first encrypt the file (using encrypt, of course) and then
 hide it. Using this script there is no metadata leakage about what may,
